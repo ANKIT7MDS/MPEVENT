@@ -15,23 +15,22 @@
     .btn.secondary{background:#1118270d;color:#111827;border:1px solid var(--line)}
     .btn.danger{background:var(--danger)}
     .hidden{display:none!important}
-    /* Camera preview box — change width if you want  */
+    /* Camera preview small, capture will be higher-res */
     .camWrap{width:360px;max-width:100%}
     .media{width:100%;border-radius:12px;background:#000;border:1px solid var(--line)}
-    input[type="range"]{width:200px}
+    input[type="range"]{width:220px}
     input[type="number"]{padding:10px;border:1px solid var(--line);border-radius:12px;width:90px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
     .thumb{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
     .thumb img{display:block;width:100%;height:140px;object-fit:cover}
     .muted{color:var(--muted)}
-    .k{font-weight:700}
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.25);z-index:20}
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="row" style="justify-content:space-between">
-    <h2 style="margin:8px 0 12px">🟦 <span class="k">Selfie Search</span> — Final</h2>
+    <h2 style="margin:8px 0 12px">🟦 <b>Selfie Search</b> — Final</h2>
     <div class="row">
       <div id="apiBadge" class="muted">API: —</div>
       <button id="adminToggle" class="btn secondary" style="margin-left:10px">Admin Panel</button>
@@ -52,9 +51,9 @@
 
       <div class="row" style="margin-top:6px">
         <label class="muted">Threshold</label>
-        <input id="th" type="range" min="0.2" max="0.9" step="0.01" value="0.45">
+        <input id="th" type="range" min="0.30" max="0.95" step="0.01" value="0.45">
         <label class="muted">Max</label>
-        <input id="mx" type="number" min="1" max="100" value="24">
+        <input id="mx" type="number" min="1" max="100" value="60">
       </div>
 
       <div class="row" style="margin-top:10px">
@@ -118,7 +117,7 @@
     linkId: '757ffaf5908b',
     folder: 'sudhirji',
     threshold: 0.45,
-    max: 24
+    max: 60
   };
 
   const $=(id)=>document.getElementById(id);
@@ -162,7 +161,8 @@
       if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
       let s;
       try{
-        s = await startCam({video:{facingMode:{ideal:'user'}, width:{ideal:640}, height:{ideal:480}}, audio:false});
+        // higher ideal to get better capture
+        s = await startCam({video:{facingMode:{ideal:'user'}, width:{ideal:1280}, height:{ideal:720}}, audio:false});
       }catch{
         s = await startCam({video:true, audio:false});
       }
@@ -184,12 +184,13 @@
     }
   };
 
+  // Capture at 720px even though preview box is small
   camCapture.onclick = ()=>{
     if(!stream){ toastMsg('पहले कैमरा ऑन करें'); return; }
-    const w=360, h=Math.round(w*(video.videoHeight/video.videoWidth || 3/4));
+    const w=720, h=Math.round(w*(video.videoHeight/video.videoWidth || 3/4));
     canvas.width=w; canvas.height=h;
     const ctx=canvas.getContext('2d'); ctx.drawImage(video,0,0,w,h);
-    lastDataUrl = canvas.toDataURL('image/jpeg',0.92);
+    lastDataUrl = canvas.toDataURL('image/jpeg',0.98);  // higher quality
     preview.src=lastDataUrl; preview.classList.remove('hidden');
   };
 
@@ -201,7 +202,7 @@
   // ===== File utils =====
   function readFileToDataURL(f){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(f); }); }
   function loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.crossOrigin='anonymous'; i.src=src; }); }
-  async function toJPEG(input,maxSide=1500,q=0.92){
+  async function toJPEG(input,maxSide=2000,q=0.98){
     const dataUrl=(typeof input==='string'&&input.startsWith('data:'))?input:await readFileToDataURL(input);
     const img=await loadImage(dataUrl);
     const s=Math.min(1,maxSide/Math.max(img.width,img.height));
@@ -218,11 +219,27 @@
       if(!data){
         const f=file.files[0];
         if(!f){ rstat.textContent='कृपया फोटो चुनें या कैमरा से कैप्चर करें'; go.disabled=false; return; }
-        data = await toJPEG(f,1500,0.9);
+        data = await toJPEG(f,2000,0.98);
         preview.src=data; preview.classList.remove('hidden');
       }
-      const payload={ image:data, linkId:linkId.value, threshold:Number($('th').value), max:Number($('mx').value) };
-      const r=await fetch(base.value,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      // slider (0-1) -> 0-100 for backend
+      const thr100 = Math.round(Number($('th').value) * 100);
+      const maxN   = Number($('mx').value);
+
+      const payload={
+        image: data,               // for older code
+        imageBase64: data,         // for your current backend
+        linkId: linkId.value,
+        threshold: thr100,         // 0-100 scale
+        maxResults: maxN,          // both names to be safe
+        max: maxN
+      };
+
+      const r=await fetch(base.value,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
       const j=await r.json(); if(!r.ok) throw new Error(j.error||r.statusText);
       rstat.textContent=(j.count||0)+' results';
       render(j.results||[]);
@@ -258,10 +275,14 @@
     try{
       const body={
         linkId: linkId.value,
-        allowedFolders: folder.value.split(',').map(s=>s.trim()).filter(Boolean),
+        allowedFolders: $('folder').value.split(',').map(s=>s.trim()).filter(Boolean),
         expiresInHours: Number(expHours.value)
       };
-      const r=await api('/admin/update-link',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},body:JSON.stringify(body)});
+      const r=await api('/admin/update-link',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},
+        body:JSON.stringify(body)
+      });
       logLine(await r.json());
       toastMsg(r.ok?'Updated':'Error');
     }catch(e){ logLine(e.message); toastMsg('Error'); }
@@ -281,9 +302,13 @@
     let ok=0,dup=0,err=0; uploadBtn.disabled=true; upStat.textContent='Uploading…';
     for(const f of selected){
       try{
-        const jpeg=await toJPEG(f,2000,0.9);
-        const body={ folderId:folder.value, image:jpeg };
-        const r=await api('/admin/upload',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},body:JSON.stringify(body)});
+        const jpeg=await toJPEG(f,2000,0.98);
+        const body={ folderId:$('folder').value, image:jpeg, imageBase64:jpeg };
+        const r=await api('/admin/upload',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},
+          body:JSON.stringify(body)
+        });
         const j=await r.json(); if(j.duplicate) dup++; else ok++; logLine({file:f.name,result:j});
       }catch(e){ err++; logLine({file:f.name,error:e.message}); }
     }
