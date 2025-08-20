@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Selfie Search • Admin (sudhirji • UI Password)</title>
+<title>Selfie Search • Admin (sudhirji)</title>
 <style>
   :root{--bg:#0b0d10;--card:#12151a;--muted:#97a3b6;--brand:#f97316;--text:#edf2f7;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
   *{box-sizing:border-box}
@@ -15,7 +15,7 @@
   .btn{background:var(--brand);color:#1b0a00;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
   .btn.ghost{background:#0000;border:1px solid #293142;color:var(--text)}
   .muted{color:var(--muted)}
-  .head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+  .head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
   .badges{display:flex;gap:8px;flex-wrap:wrap}
   .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:999px;background:#0e1625;border:1px solid #20304a;color:#b6c3d9;font-size:12px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -28,48 +28,37 @@
   progress{width:100%}
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #1d2740;background:#0e1625;margin-right:6px}
   .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
-  /* UI Password gate (overlay) */
-  .gate{position:fixed;inset:0;background:#0b0d10;display:flex;align-items:center;justify-content:center;z-index:50}
-  .gate .panel{background:#111522;border:1px solid #1b2130;border-radius:18px;padding:22px;max-width:360px;width:96%}
-  .input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #273148;background:#0d1220;color:var(--text)}
   .row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  label.small{font-size:12px;color:var(--muted)}
+  details summary{cursor:pointer}
 </style>
 </head>
 <body>
 
-<!-- UI Password Gate -->
-<div class="gate" id="gate">
-  <div class="panel">
-    <h3 style="margin:0 0 6px">Admin Login (UI Password)</h3>
-    <div class="muted" style="margin-bottom:10px">पासवर्ड भरते ही UI खुल जाएगा (backend token की ज़रूरत नहीं).</div>
-    <input id="uiPass" class="input" placeholder="UI Password" type="password" autocomplete="off"/>
-    <div class="row2" style="margin-top:10px">
-      <button id="login" class="btn" style="flex:1">Login</button>
-      <button id="show" class="btn ghost" style="width:110px">Show</button>
-      <label class="small"><input type="checkbox" id="remember"> Remember</label>
-    </div>
-    <div id="gateMsg" class="muted" style="margin-top:8px"></div>
-  </div>
-</div>
-
-<!-- Admin App -->
-<div class="wrap" id="app" hidden>
+<div class="wrap" id="app">
   <div class="row">
     <div class="card head">
       <div class="badges">
         <div class="badge">Admin Panel</div>
+        <div class="badge">API: <span id="apiState">checking…</span></div>
         <div class="badge">Folder: <b>sudhirji</b></div>
         <div class="badge">Session • <span id="sCount">0</span> files</div>
       </div>
       <div class="row2">
-        <button id="logout" class="btn ghost">Logout</button>
+        <details>
+          <summary>Advanced</summary>
+          <div class="muted" style="margin-top:6px">डिफ़ॉल्ट रूप से Authorization header नहीं भेजा जाता। यदि आपका backend टोकन माँगता है, इसे ON करें।</div>
+          <label class="row2" style="margin-top:6px">
+            <input type="checkbox" id="useAuth"> Use Authorization header
+          </label>
+          <input id="admTok" class="input" placeholder="ADMIN TOKEN (optional)" style="margin-top:6px;padding:10px;border:1px solid #273148;border-radius:10px;background:#101523;color:#dbe3f0"/>
+        </details>
       </div>
     </div>
 
     <div class="grid2">
       <div class="card">
         <h3 style="margin:0 0 8px">⬆️ Upload to <code>sudhirji</code></h3>
+
         <div id="drop" class="drop">
           <div style="font-size:22px;margin-bottom:6px">Drag & Drop files here</div>
           <div class="muted">or</div>
@@ -106,82 +95,37 @@
 </div>
 
 <script>
-/* ========= FIXEDS ========= */
+/* ===== FIXED API/FOLDER ===== */
 const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
 const URLS = { health: `${API_BASE}/health`, upload: `${API_BASE}/admin/upload` };
 const FOLDER_ID = "sudhirji";
 
-/* ===== UI Password (hardcoded) ===== */
-const REQUIRED_UI_PW = "MP5331";       // <<< यहीं आपका पासवर्ड फिक्स है
-const UI_KEY = "ui_ok";                // sessionStorage flag
-const UI_PW_KEY = "ui_pw_save";        // localStorage (Remember)
-
 /* ===== Shortcuts ===== */
 const el = id => document.getElementById(id);
 
-/* ===== Gate logic ===== */
-(function initGate(){
-  // #login जोड़कर खोलें तो जबरन लॉगिन स्क्रीन आए
-  if(location.hash==="#login"){ localStorage.removeItem(UI_PW_KEY); sessionStorage.removeItem(UI_KEY); }
-
-  // पहले से सेव पासवर्ड मिला तो तभी अनलॉक करें जब वो REQUIRED_UI_PW हो
-  const saved = localStorage.getItem(UI_PW_KEY);
-  if(saved === REQUIRED_UI_PW){
-    sessionStorage.setItem(UI_KEY, "1");
-    openApp(); boot(); return;
-  }else{
-    localStorage.removeItem(UI_PW_KEY);
-  }
-
-  openGate();
-  el('show').onclick = ()=>{ const p=el('uiPass'); p.type = p.type==='password' ? 'text' : 'password'; };
-  el('login').onclick = tryLogin;
-  el('uiPass').addEventListener('keydown',e=>{ if(e.key==='Enter') tryLogin(); });
-  el('logout').onclick = doLogout;
-
-  function tryLogin(){
-    const p = el('uiPass').value.trim();
-    if(!p){ el('gateMsg').textContent='Please enter UI password'; return; }
-    if(p !== REQUIRED_UI_PW){ el('gateMsg').textContent='Wrong password'; return; }
-    sessionStorage.setItem(UI_KEY, "1");
-    if(el('remember').checked){ localStorage.setItem(UI_PW_KEY, p); }
-    el('uiPass').value='';
-    openApp(); boot();
-  }
+/* ===== Health check (info only) ===== */
+(async () => {
+  try { const r=await fetch(URLS.health); const j=await r.json(); el('apiState').textContent = j.ok? 'OK':'error'; }
+  catch { el('apiState').textContent = 'error'; }
 })();
 
-function openGate(){ el('gate').hidden=false; el('app').hidden=true; }
-function openApp(){  el('gate').hidden=true;  el('app').hidden=false; }
-function doLogout(){
-  localStorage.removeItem(UI_PW_KEY);
-  sessionStorage.removeItem(UI_KEY);
-  openGate();
-}
+/* ===== Drag & Drop / Picker ===== */
+const drop = el('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.remove('over');}));
+drop.addEventListener('drop', e=> addToQueue([...(e.dataTransfer?.files||[])]) );
+el('pick').addEventListener('change', e=>{ addToQueue([...(e.target.files||[])]); e.target.value=''; });
 
-/* ========= App boot ========= */
-async function boot(){
-  // (Optional) Health ping — informational
-  try{ const r=await fetch(URLS.health); await r.json(); }catch(_){}
+el('start').onclick = startUpload;
+el('clear').onclick = clearQueue;
 
-  // Drag & Drop
-  const drop = el('drop');
-  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.add('over');}));
-  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.remove('over');}));
-  drop.addEventListener('drop', e=> addToQueue([...(e.dataTransfer?.files||[])]));
-
-  el('pick').addEventListener('change', e=>{ addToQueue([...(e.target.files||[])]); e.target.value=''; });
-
-  el('start').onclick = startUpload;
-  el('clear').onclick = clearQueue;
-}
-
-/* ========= Queue & Rendering ========= */
+/* ===== Queue state ===== */
 const queue=[]; let ok=0,dup=0,fail=0,done=0;
 
 function addToQueue(files){
   files.forEach(f=>{
-    const u=URL.createObjectURL(f);
-    queue.push({file:f,url:u,state:'waiting',note:''});
+    const u = URL.createObjectURL(f);
+    queue.push({file:f, url:u, state:'waiting', note:''});
   });
   renderQueue();
 }
@@ -193,9 +137,12 @@ function clearQueue(){
 }
 function renderQueue(){
   el('q').textContent = queue.length - done;
-  el('ok').textContent = ok; el('dup').textContent = dup; el('fail').textContent = fail;
+  el('ok').textContent = ok;
+  el('dup').textContent = dup;
+  el('fail').textContent = fail;
   el('sCount').textContent = done;
-  const list=el('list'); list.innerHTML='';
+
+  const list = el('list'); list.innerHTML='';
   queue.forEach(it=>{
     const div=document.createElement('div'); div.className='item';
     div.innerHTML = `
@@ -208,23 +155,32 @@ function renderQueue(){
   });
 }
 
-/* ========= Any → JPEG (client-side) ========= */
+/* ===== Any → JPEG (client-side) ===== */
 function fileToDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
 async function toJPEG(file){
-  const data=await fileToDataURL(file);
-  const img=new Image(); img.crossOrigin='anonymous';
-  await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=data; });
+  const dataUrl = await fileToDataURL(file);
+  const img = new Image(); img.crossOrigin='anonymous';
+  await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=dataUrl; });
   const maxSide=1600, s=Math.min(1, maxSide/Math.max(img.width,img.height));
   const W=Math.max(1,Math.round(img.width*s)), H=Math.max(1,Math.round(img.height*s));
-  const c=document.createElement('canvas'); c.width=W; c.height=H; c.getContext('2d').drawImage(img,0,0,W,H);
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  c.getContext('2d').drawImage(img,0,0,W,H);
   return c.toDataURL('image/jpeg',0.92);
 }
 
-/* ========= Upload (3 parallel) ========= */
-async function startUpload(){
-  if(!sessionStorage.getItem(UI_KEY)){ openGate(); return; }
-  if(queue.length===0){ alert('Add some files first'); return; }
+/* ===== Optional Authorization header ===== */
+function authHeaders(){
+  const h = { "Content-Type":"application/json" };
+  if(el('useAuth').checked){
+    const tok = el('admTok').value.trim();
+    if(tok) h["Authorization"] = `Bearer ${tok}`;
+  }
+  return h;
+}
 
+/* ===== Upload (3 parallel) ===== */
+async function startUpload(){
+  if(queue.length===0){ alert('Add some files first'); return; }
   el('bar').value=0; ok=dup=fail=done=0; renderQueue();
 
   const MAX_CONC=3; let idx=0, active=0;
@@ -232,31 +188,42 @@ async function startUpload(){
     const next=()=>{
       if(idx>=queue.length && active===0) return resolve();
       while(active<MAX_CONC && idx<queue.length){
-        const cur=queue[idx++]; active++;
-        handleOne(cur).finally(()=>{ active--; el('bar').value=Math.round((done/queue.length)*100); el('progMsg').textContent=`${done}/${queue.length}`; renderQueue(); next(); });
+        const cur = queue[idx++]; active++;
+        handleOne(cur).finally(()=>{
+          active--;
+          el('bar').value = Math.round((done/queue.length)*100);
+          el('progMsg').textContent = `${done}/${queue.length}`;
+          renderQueue();
+          next();
+        });
       }
-    }; next();
+    };
+    next();
   });
 }
 
 async function handleOne(item){
   try{
     item.state='converting'; renderQueue();
-    const jpeg=await toJPEG(item.file);
+    const jpeg = await toJPEG(item.file);
 
     item.state='uploading'; renderQueue();
-    const r=await fetch(URLS.upload,{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },  // NO Authorization header (जैसा आपने कहा)
+    const r = await fetch(URLS.upload, {
+      method: "POST",
+      headers: authHeaders(),                 // default: NO Authorization (जब तक Advanced ON न करें)
       body: JSON.stringify({ folderId: FOLDER_ID, imageBase64: jpeg })
     });
 
-    let j={}; try{ j=await r.json(); }catch(_){}
-    if(j.duplicate){ dup++; item.state='done'; item.note='duplicate'; }
-    else if(j.ok){ ok++; item.state='done'; item.note='ok'; }
-    else if(!r.ok){
-      fail++; item.state='error'; item.note = j.error || r.statusText;
-      if(r.status===401){ el('note').textContent='⚠️ Server 401 दे रहा है (backend token मांग रहा होगा)। बिना token चलाने हेतु backend को allow करना पड़ेगा.'; }
+    let j={}; try{ j = await r.json(); }catch(_){}
+    if(r.status===401){
+      fail++; item.state='error'; item.note='401 Unauthorized (server needs token)';
+      el('note').textContent='⚠️ Backend 401 दे रहा है—Advanced में "Use Authorization header" ON करके सही ADMIN TOKEN भरें, या backend को बिना token allow करें.';
+    }else if(j.duplicate){
+      dup++; item.state='done'; item.note='duplicate';
+    }else if(j.ok){
+      ok++; item.state='done'; item.note='ok';
+    }else if(!r.ok){
+      fail++; item.state='error'; item.note=j.error||r.statusText;
     }else{
       ok++; item.state='done'; item.note='ok';
     }
