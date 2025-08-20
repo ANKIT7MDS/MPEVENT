@@ -86,6 +86,7 @@
                 <div class="flex justify-center gap-2">
                   <button id="btnStartCam" class="btn btn-ghost">कैमरा चालू</button>
                   <button id="btnSnap" class="btn btn-primary" disabled>कैप्चर</button>
+                  <button id="btnFlip" class="btn btn-ghost" disabled>Flip</button>
                 </div>
               </div>
             </div>
@@ -467,6 +468,85 @@
   $('themeLight').addEventListener('click', ()=> setTheme('light'));
   $('themeDark').addEventListener('click', ()=> setTheme('dark'));
   document.querySelectorAll('[data-accent]').forEach(b=> b.addEventListener('click', ()=> setAccent(b.dataset.accent)));
+
+  // Camera Enhanced (robust error handling)
+  let currentStream = null;
+  let currentFacing = 'user';
+
+  function stopCamera(){
+    try { currentStream?.getTracks().forEach(t=>t.stop()); } catch {}
+    currentStream = null;
+    $('btnSnap')?.setAttribute('disabled','');
+    $('btnFlip')?.setAttribute('disabled','');
+  }
+
+  function showCamError(err){
+    let tips = [];
+    let title = 'कैमरा उपलब्ध नहीं';
+    if (!window.isSecureContext && location.hostname !== 'localhost') {
+      tips = ['इस पेज को HTTPS या http://localhost पर चलाएँ', 'file:// से ओपन करने पर कैमरा काम नहीं करता'];
+    } else if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') {
+      tips = ['ब्राउज़र परमिशन में कैमरा Allow करें', 'अगर पहले Block किया था तो साइट सेटिंग्स में Allow करें और पेज रीलोड करें'];
+    } else if (err?.name === 'NotFoundError') {
+      tips = ['डिवाइस में कैमरा उपलब्ध होना चाहिए', 'अगर डेस्कटॉप है तो USB/Webcam कनेक्शन चेक करें'];
+    } else if (err?.name === 'NotReadableError') {
+      tips = ['कैमरा किसी और ऐप में चल रहा है—उसे बंद करें फिर ट्राय करें'];
+    } else {
+      tips = ['ब्राउज़र अपडेट करें या Chrome/Edge/Safari में ट्राय करें', 'Upload टैब से इमेज अपलोड करके भी सर्च कर सकते हैं'];
+    }
+    const overlay = $('camOverlay');
+    if (overlay) {
+      overlay.innerHTML = `<div class="space-y-2"><div class="text-sm">${title}</div><ul class="text-xs opacity-90 list-disc list-inside">${tips.map(t=>`<li>${t}</li>`).join('')}</ul><div class="flex justify-center gap-2 mt-2"><button id=\"camRetry\" class=\"btn btn-primary !py-1\">फिर से ट्राई</button><button id=\"camGoUpload\" class=\"btn btn-ghost !py-1\">Upload पर जाएँ</button></div></div>`;
+      overlay.classList.remove('hidden');
+      $('camRetry')?.addEventListener('click', ()=>{ overlay.classList.add('hidden'); startCamera(); });
+      $('camGoUpload')?.addEventListener('click', ()=> activateTab('upload'));
+    }
+    toast('कैमरा एरर');
+    status('कैमरा एरर');
+  }
+
+  async function startCamera(){
+    try{
+      if (!window.isSecureContext && location.hostname !== 'localhost') {
+        throw new Error('INSECURE_CONTEXT');
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('NO_GUM');
+      }
+      stopCamera();
+      const pref = { video: { facingMode: { ideal: currentFacing } } };
+      const stream = await navigator.mediaDevices.getUserMedia(pref);
+      currentStream = stream;
+      const video = $('video');
+      video.srcObject = stream; video.muted = true;
+      video.classList.remove('hidden'); $('camOverlay')?.classList.add('hidden');
+      $('btnSnap')?.removeAttribute('disabled');
+      $('btnFlip')?.removeAttribute('disabled');
+      status('कैमरा चालू');
+    }catch(err){
+      console.error(err);
+      // fallback to back camera if front not found
+      if ((err.name === 'OverconstrainedError' || err.name === 'NotFoundError') && currentFacing === 'user') {
+        try{
+          currentFacing = 'environment';
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: currentFacing } } });
+          currentStream = stream;
+          const video = $('video');
+          video.srcObject = stream; video.muted = true;
+          video.classList.remove('hidden'); $('camOverlay')?.classList.add('hidden');
+          $('btnSnap')?.removeAttribute('disabled');
+          $('btnFlip')?.removeAttribute('disabled');
+          status('कैमरा चालू');
+          return;
+        }catch(e2){ console.error(e2); }
+      }
+      showCamError(err);
+    }
+  }
+
+  // Add flip handler
+  const _btnFlip = document.getElementById('btnFlip');
+  _btnFlip && _btnFlip.addEventListener('click', ()=>{ currentFacing = currentFacing==='user' ? 'environment' : 'user'; startCamera(); });
 
   // Boot
   function boot(){
