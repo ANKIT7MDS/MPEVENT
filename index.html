@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Selfie Search — Final (Recall+Crop)</title>
+<title>Selfie Search — Exhaustive</title>
 <style>
   :root{--line:#e5e7eb;--brand:#5b7cff;--ok:#10b981;--danger:#ef4444;--muted:#6b7280}
   *{box-sizing:border-box}
@@ -15,46 +15,39 @@
   .btn.secondary{background:#1118270d;color:#111827;border:1px solid var(--line)}
   .btn.danger{background:var(--danger)}
   .hidden{display:none!important}
-  .camWrap{width:360px;max-width:100%;position:relative}
+  .camWrap{width:360px;max-width:100%}
   .media{width:100%;border-radius:12px;background:#000;border:1px solid var(--line)}
-  .overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
   .muted{color:var(--muted)}
   input[type="range"]{width:220px}
   input[type="number"]{padding:10px;border:1px solid var(--line);border-radius:12px;width:100px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
   .thumb{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
   .thumb img{width:100%;height:140px;object-fit:cover;display:block}
-  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.25);z-index:20}
   .badge{font-size:12px;border:1px solid var(--line);padding:5px 8px;border-radius:999px;background:#fff}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="row" style="justify-content:space-between">
-    <h2 style="margin:6px 0 12px">🟦 <b>Selfie Search</b> — Final</h2>
-    <div class="row">
-      <span id="apiBadge" class="badge">API: —</span>
-      <button id="adminToggle" class="btn secondary">Admin Panel</button>
-    </div>
+    <h2 style="margin:6px 0 12px">🟦 <b>Selfie Search</b> — Exhaustive</h2>
+    <span id="apiBadge" class="badge">API: —</span>
   </div>
 
   <div class="row" style="align-items:flex-start">
     <section class="card" style="flex:1 1 520px">
       <h3>इनपुट</h3>
 
-      <!-- hidden defaults -->
-      <div class="hidden">
-        <input id="base" type="hidden"/>
-        <input id="linkId" type="hidden"/>
-        <input id="folder" type="hidden"/>
-      </div>
+      <!-- Hidden config -->
+      <input id="base" type="hidden">
+      <input id="linkId" type="hidden">
+      <input id="folder" type="hidden">
 
       <div class="row" style="margin-top:6px">
         <label class="muted">Threshold</label>
-        <input id="th" type="range" min="0.30" max="0.95" step="0.01" value="0.38">
+        <input id="th" type="range" min="0.30" max="0.95" step="0.01" value="0.35">
         <label class="muted">Max</label>
-        <input id="mx" type="number" min="1" max="4096" value="200">
-        <label class="row muted" style="gap:6px"><input id="enh" type="checkbox" checked>Enhanced</label>
+        <input id="mx" type="number" min="1" max="4096" value="4096">
+        <label class="row muted" style="gap:6px"><input id="exh" type="checkbox" checked>Exhaustive</label>
       </div>
 
       <div class="row" style="margin-top:10px">
@@ -63,23 +56,9 @@
         <button id="clr" class="btn secondary">क्लियर</button>
       </div>
 
-      <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
-
-      <div class="row">
-        <button id="camStart" class="btn secondary">कैमरा ऑन</button>
-        <button id="camCapture" class="btn hidden" style="background:var(--ok)">कैप्चर</button>
-        <button id="camStop" class="btn danger hidden">बंद करें</button>
-        <button id="cropToggle" class="btn secondary hidden">Crop मोड</button>
-        <button id="useCrop" class="btn hidden">Crop Apply</button>
-      </div>
-
       <div class="camWrap" style="margin-top:10px">
-        <video id="video" class="media hidden" autoplay playsinline muted></video>
         <img id="preview" class="media hidden" alt="preview"/>
-        <canvas id="work" class="media hidden"></canvas>
-        <canvas id="box" class="overlay hidden"></canvas>
       </div>
-      <div id="camMsg" class="muted" style="margin-top:6px"></div>
     </section>
 
     <section class="card" style="flex:1 1 480px">
@@ -88,202 +67,125 @@
       <div id="results" class="grid"></div>
     </section>
   </div>
-
-  <section id="admin" class="card hidden" style="margin-top:12px">
-    <h3>🔐 Admin Panel</h3>
-    <div class="row">
-      <input id="admToken" type="password" placeholder="Admin Token"
-             style="padding:10px;border:1px solid var(--line);border-radius:12px;min-width:260px">
-      <input id="expHours" type="number" value="720"
-             style="padding:10px;border:1px solid var(--line);border-radius:12px">
-      <button id="updateLinkBtn" class="btn">Update Link</button>
-      <button id="loadFoldersBtn" class="btn secondary">Load Folders</button>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <input id="multi" type="file" multiple accept="image/*">
-      <button id="uploadBtn" class="btn">Upload Selected</button>
-      <span id="upStat" class="muted"></span>
-    </div>
-    <pre id="log" style="background:#0b1220;color:#cbd5e1;padding:10px;border-radius:10px;max-height:200px;overflow:auto"></pre>
-  </section>
 </div>
-
-<div id="toast" class="toast hidden"></div>
 
 <script>
 (function(){
-  // ===== Defaults (as requested) =====
+  // ---- Defaults (LOCKED as per your request)
   const DEFAULTS = {
     base:   'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search',
     linkId: '757ffaf5908b',
     folder: 'sudhirji',
-    threshold: 0.38,
-    max: 200
+    threshold: 0.35,
+    max: 4096
   };
 
   const $=id=>document.getElementById(id);
-  const q=new URLSearchParams(location.search);
+  const q = new URLSearchParams(location.search);
   $('base').value   = q.get('base') || DEFAULTS.base;
   $('linkId').value = q.get('link') || DEFAULTS.linkId;
   $('folder').value = q.get('folder') || DEFAULTS.folder;
   $('th').value     = q.get('threshold') || DEFAULTS.threshold;
   $('mx').value     = q.get('max') || DEFAULTS.max;
 
-  const apiBadge=$('apiBadge'), resultsEl=$('results'), rstat=$('rstat');
-  const file=$('file'), go=$('go'), clr=$('clr'), enh=$('enh');
-  const camStart=$('camStart'), camCapture=$('camCapture'), camStop=$('camStop');
-  const preview=$('preview'), video=$('video'), work=$('work'), box=$('box');
-  const camMsg=$('camMsg'), cropToggle=$('cropToggle'), useCrop=$('useCrop');
-  const admin=$('admin'), adminToggle=$('adminToggle'), admToken=$('admToken'), expHours=$('expHours');
-  const updateLinkBtn=$('updateLinkBtn'), loadFoldersBtn=$('loadFoldersBtn'), multi=$('multi'), uploadBtn=$('uploadBtn'), upStat=$('upStat'), log=$('log');
-  const toast=$('toast');
+  const apiBadge=$('apiBadge'), preview=$('preview'), file=$('file'), go=$('go'), clr=$('clr'), exh=$('exh');
+  const resultsEl=$('results'), rstat=$('rstat');
 
-  const root = ()=> $('base').value.replace(/\/search$/,'');
-  const toastMsg = m => { toast.textContent=m; toast.classList.remove('hidden'); setTimeout(()=>toast.classList.add('hidden'),2200); };
-  const logLine  = x => { log.textContent += (typeof x==='string'?x:JSON.stringify(x))+'\n'; log.scrollTop = log.scrollHeight; };
-  const thr100 = v => { const n=Number(v); return n<=1?Math.round(n*100):Math.round(n); };
+  const root=()=>$('base').value.replace(/\/search$/,'');
+  const thr100=v=>{const n=Number(v);return n<=1?Math.round(n*100):Math.round(n);};
 
-  // --- API health
-  (async function(){
-    try{ const r=await fetch(root()+'/health'); await r.json(); apiBadge.textContent='API: OK'; }
-    catch{ apiBadge.textContent='API: Error'; }
-  })();
+  // health
+  (async()=>{ try{ const r=await fetch(root()+'/health'); await r.json(); apiBadge.textContent='API: OK'; }catch{ apiBadge.textContent='API: Error'; } })();
 
-  // ===== Helpers =====
-  function readFileToDataURL(f){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(f); }); }
-  function loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.crossOrigin='anonymous'; i.src=src; }); }
+  // helpers
+  function readFileToDataURL(f){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(f);});}
+  function loadImage(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.crossOrigin='anonymous';i.src=src;});}
   async function toJPEG(input,maxSide=2000,q=0.98){
-    const dataUrl=(typeof input==='string'&&input.startsWith('data:'))?input:await readFileToDataURL(input);
-    const img=await loadImage(dataUrl);
+    const data=(typeof input==='string'&&input.startsWith('data:'))?input:await readFileToDataURL(input);
+    const img=await loadImage(data);
     const s=Math.min(1,maxSide/Math.max(img.width,img.height));
     const w=Math.round(img.width*s), h=Math.round(img.height*s);
     const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
     return c.toDataURL('image/jpeg',q);
   }
-  function dataURLToCanvas(data){
-    const c=document.createElement('canvas'), ctx=c.getContext('2d');
-    return loadImage(data).then(img=>{ c.width=img.width; c.height=img.height; ctx.drawImage(img,0,0); return c; });
+  async function dataURLToCanvas(data){
+    const img=await loadImage(data); const c=document.createElement('canvas'); c.width=img.width; c.height=img.height; c.getContext('2d').drawImage(img,0,0); return c;
+  }
+  function cropFromCanvas(c, rect){
+    const t=document.createElement('canvas'); t.width=rect.w; t.height=rect.h;
+    t.getContext('2d').drawImage(c,rect.x,rect.y,rect.w,rect.h,0,0,rect.w,rect.h);
+    return t.toDataURL('image/jpeg',0.98);
   }
 
-  // ===== Camera =====
-  let stream=null, lastDataUrl=null;
-  async function startCam(cons){ return await navigator.mediaDevices.getUserMedia(cons); }
+  // smart crop generator (10 crops)
+  function makeCrops(W,H){
+    const crops=[];
+    // center squares (0.9, 0.75, 0.6)
+    [0.90,0.75,0.60].forEach(f=>{
+      const s=Math.round(Math.min(W,H)*f);
+      crops.push({x:Math.round((W-s)/2),y:Math.round((H-s)/2),w:s,h:s});
+    });
+    // portrait tiles (3 cols × 2 rows, size 0.65W × 0.70H)
+    const pw=Math.round(W*0.65), ph=Math.round(H*0.70);
+    const xs=[0, Math.round((W-pw)/2), W-pw];
+    const ys=[Math.round(H*0.05), Math.round(H*0.18)];
+    xs.forEach(x=>ys.forEach(y=>crops.push({x,y,w:pw,h:ph})));
+    return crops;
+  }
 
-  camStart.onclick=async()=>{
-    try{
-      camMsg.textContent='';
-      if(!location.protocol.startsWith('https') && location.hostname!=='localhost'){
-        camMsg.textContent='साइट HTTPS पर खोलें (या localhost)।'; return;
-      }
-      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-      let s;
-      try{ s=await startCam({video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:720}},audio:false}); }
-      catch{ s=await startCam({video:true,audio:false}); }
-      stream=s; video.srcObject=stream; await video.play().catch(()=>{});
-      video.classList.remove('hidden'); camCapture.classList.remove('hidden'); camStop.classList.remove('hidden'); camStart.classList.add('hidden');
-      preview.classList.add('hidden'); work.classList.add('hidden'); box.classList.add('hidden'); cropToggle.classList.add('hidden'); useCrop.classList.add('hidden');
-      lastDataUrl=null; toastMsg('Camera started');
-    }catch(err){
-      let msg='कैमरा चालू नहीं हुआ.'; if(err.name==='NotAllowedError') msg+=' परमिशन Allow करें।';
-      else if(err.name==='NotFoundError') msg+=' कैमरा डिवाइस नहीं मिला।';
-      else if(err.name==='NotReadableError') msg+=' कैमरा किसी और ऐप में व्यस्त है।';
-      camMsg.textContent=msg; toastMsg(msg);
+  // concurrency + retry
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  async function withRetry(fn, tries=3){
+    for(let t=1;t<=tries;t++){
+      try{ return await fn(); }catch(e){ if(t===tries) throw e; await wait(300*t); }
     }
-  };
-
-  camCapture.onclick=()=>{
-    if(!stream){ toastMsg('पहले कैमरा ऑन करें'); return; }
-    const w=720, h=Math.round(w*(video.videoHeight/video.videoWidth||3/4));
-    const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(video,0,0,w,h);
-    lastDataUrl=c.toDataURL('image/jpeg',0.98);
-    preview.src=lastDataUrl; preview.classList.remove('hidden');
-    video.classList.add('hidden');
-    cropToggle.classList.remove('hidden'); // allow cropping on captured frame
-  };
-
-  camStop.onclick=()=>{
-    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-    video.classList.add('hidden'); camCapture.classList.add('hidden'); camStop.classList.add('hidden'); camStart.classList.remove('hidden');
-  };
-
-  // ===== Crop Mode (manual) =====
-  let cropMode=false, crop={x:0,y:0,w:0,h:0}, dragging=false, start={x:0,y:0};
-  function showCanvas(dataUrl){
-    preview.classList.add('hidden');
-    work.classList.remove('hidden'); box.classList.remove('hidden');
-    loadImage(dataUrl).then(img=>{
-      work.width=img.width; work.height=img.height;
-      box.width=img.width; box.height=img.height;
-      work.getContext('2d').drawImage(img,0,0);
+  }
+  async function runQueue(items, fn, limit=3){
+    let i=0, active=0, out=[];
+    return new Promise(resolve=>{
+      const next=()=>{
+        if(i===items.length && active===0) return resolve(out);
+        while(active<limit && i<items.length){
+          const cur=items[i++]; active++;
+          fn(cur).then(r=>{ out.push(r); })
+                 .catch(()=>{})
+                 .finally(()=>{ active--; next(); });
+        }
+      };
+      next();
     });
   }
-  function drawBox(){
-    const ctx=box.getContext('2d');
-    ctx.clearRect(0,0,box.width,box.height);
-    if(crop.w<=0||crop.h<=0) return;
-    ctx.strokeStyle='#22c55e'; ctx.lineWidth=2; ctx.setLineDash([6,4]);
-    ctx.strokeRect(crop.x,crop.y,crop.w,crop.h);
-  }
-  function canvasPos(e){
-    const r=work.getBoundingClientRect();
-    const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
-    const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
-    // scale for CSS size -> canvas size
-    const sx=work.width/r.width, sy=work.height/r.height;
-    return {x:Math.max(0,Math.min(work.width, x*sx)), y:Math.max(0,Math.min(work.height, y*sy))};
+
+  // parse S3 key out of presigned URL (fallback)
+  function keyFromUrl(u){
+    try{ const url=new URL(u); return url.searchParams.get('Key') || url.pathname.replace(/^\/+/,''); }
+    catch{ return u; }
   }
 
-  cropToggle.onclick=()=>{
-    if(!lastDataUrl){ toastMsg('पहले फोटो चुनें/कैप्चर करें'); return; }
-    cropMode=!cropMode;
-    if(cropMode){ showCanvas(lastDataUrl); useCrop.classList.remove('hidden'); cropToggle.textContent='Crop Off'; }
-    else{ work.classList.add('hidden'); box.classList.add('hidden'); useCrop.classList.add('hidden'); preview.classList.remove('hidden'); cropToggle.textContent='Crop मोड'; }
-  };
-  function bindCrop(){
-    ['mousedown','touchstart'].forEach(ev=>work.addEventListener(ev,e=>{ if(!cropMode)return; dragging=true; const p=canvasPos(e); start=p; crop={x:p.x,y:p.y,w:0,h:0}; drawBox(); }));
-    ['mousemove','touchmove'].forEach(ev=>work.addEventListener(ev,e=>{ if(!dragging||!cropMode)return; const p=canvasPos(e); crop.w=p.x-start.x; crop.h=p.y-start.y; if(crop.w<0){crop.x=p.x; crop.w=Math.abs(crop.w);} if(crop.h<0){crop.y=p.y; crop.h=Math.abs(crop.h);} drawBox(); },{passive:false}));
-    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>work.addEventListener(ev,()=>{ dragging=false; }));
-  } bindCrop();
-
-  useCrop.onclick=()=>{
-    if(!crop.w||!crop.h){ toastMsg('पहले selection बनायें'); return; }
-    const c=document.createElement('canvas'); c.width=crop.w; c.height=crop.h;
-    c.getContext('2d').drawImage(work,crop.x,crop.y,crop.w,crop.h,0,0,crop.w,crop.h);
-    lastDataUrl=c.toDataURL('image/jpeg',0.98);
-    preview.src=lastDataUrl; preview.classList.remove('hidden');
-    work.classList.add('hidden'); box.classList.add('hidden'); useCrop.classList.add('hidden'); cropToggle.textContent='Crop मोड'; cropMode=false;
-  };
-
-  // ===== Search =====
+  // API call
   async function callSearch(data, maxN, thr){
-    // debug mode to bypass link
-    const mode=q.get('mode'), foldersParam=q.get('folders');
     const payload={
-      image:data,
-      imageBase64:data,
-      threshold:thr,
-      maxResults:maxN,
-      max:maxN
+      image:data, imageBase64:data,
+      threshold:thr, maxResults:maxN, max:maxN
     };
-    if(mode==='folders' && foldersParam){
-      payload.allowedFolders=foldersParam.split(',').map(s=>s.trim()).filter(Boolean);
+    // debug bypass
+    const mode=q.get('mode'), folders=q.get('folders');
+    if(mode==='folders' && folders){
+      payload.allowedFolders = folders.split(',').map(s=>s.trim()).filter(Boolean);
     }else{
-      payload.linkId=$('linkId').value;
+      payload.linkId = $('linkId').value;
     }
-    const r=await fetch($('base').value,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const j=await r.json();
-    if(!r.ok) throw new Error(j.error||r.statusText);
+    const r=await withRetry(()=>fetch($('base').value,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}));
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||r.statusText);
     return j.results||[];
   }
 
-  function dedupSort(all){
+  function dedupSort(list){
     const map=new Map();
-    for(const it of all){
-      const k= it.key || it.downloadUrl;
-      if(!map.has(k)) map.set(k, it);
-      else{
-        // keep higher similarity
-        if(Number(it.similarity||0) > Number(map.get(k).similarity||0)) map.set(k,it);
+    for(const it of list){
+      const k = it.key || keyFromUrl(it.downloadUrl);
+      if(!map.has(k) || Number(it.similarity||0) > Number(map.get(k).similarity||0)){
+        map.set(k, it);
       }
     }
     return Array.from(map.values()).sort((a,b)=>Number(b.similarity||0)-Number(a.similarity||0));
@@ -292,48 +194,32 @@
   async function search(){
     try{
       go.disabled=true; rstat.textContent='सर्च हो रहा है…'; resultsEl.innerHTML='';
-      let data=lastDataUrl;
-      if(!data){
-        const f=file.files[0];
-        if(!f){ rstat.textContent='कृपया फोटो चुनें या कैमरा से कैप्चर करें'; go.disabled=false; return; }
-        data=await toJPEG(f,2000,0.98);
-        preview.src=data; preview.classList.remove('hidden');
-        cropToggle.classList.remove('hidden');
+      const f=file.files[0]; if(!f){ rstat.textContent='कृपया फोटो चुनें'; go.disabled=false; return; }
+      const baseImg=await toJPEG(f,2000,0.98);
+      preview.src=baseImg; preview.classList.remove('hidden');
+
+      const maxN = Math.max(1, Math.min(4096, Number($('mx').value)));
+      const thr  = thr100($('th').value);
+
+      // Pass list (original + crops)
+      const urls=[baseImg];
+      if(exh.checked){
+        const c=await dataURLToCanvas(baseImg);
+        const W=c.width, H=c.height;
+        for(const rc of makeCrops(W,H)) urls.push(cropFromCanvas(c,rc));
       }
-      const maxN=Math.max(1, Math.min(4096, Number($('mx').value)));
-      const thr=thr100($('th').value);
 
-      // pass-1: full image
-      let all=await callSearch(data, maxN, thr);
-
-      // Enhanced: try some crops (center/portrait) to improve recall
-      if(enh.checked){
-        const baseCanvas=await dataURLToCanvas(data);
-        const W=baseCanvas.width, H=baseCanvas.height, ctx=baseCanvas.getContext('2d');
-
-        const crops=[];
-        // center square 70%
-        const s=Math.round(Math.min(W,H)*0.7);
-        crops.push({x:Math.round((W-s)/2), y:Math.round((H-s)/2), w:s, h:s});
-        // upper-center portrait
-        const pw=Math.round(W*0.55), ph=Math.round(H*0.65);
-        crops.push({x:Math.round((W-pw)/2), y:Math.round(H*0.08), w:pw, h:ph});
-        // mid portrait
-        crops.push({x:Math.round((W-pw)/2), y:Math.round(H*0.18), w:pw, h:ph});
-
-        for(const c of crops){
-          const tmp=document.createElement('canvas'); tmp.width=c.w; tmp.height=c.h;
-          tmp.getContext('2d').drawImage(baseCanvas,c.x,c.y,c.w,c.h,0,0,c.w,c.h);
-          const d=tmp.toDataURL('image/jpeg',0.98);
-          try{
-            const part=await callSearch(d, maxN, thr);
-            all=all.concat(part);
-          }catch(e){ /* ignore single pass errors */ }
-        }
-      }
+      rstat.textContent=`${urls.length} passes…`;
+      const all=[];
+      let done=0;
+      await runQueue(urls, async (u)=>{
+        const part=await callSearch(u, maxN, thr);
+        all.push(...part);
+        done++; rstat.textContent=`Pass ${done}/${urls.length} — ${all.length} raw hits`;
+      }, 3);
 
       const final=dedupSort(all);
-      rstat.textContent=final.length+' results';
+      rstat.textContent=`${final.length} results`;
       render(final);
     }catch(e){
       rstat.textContent='फेल: '+e.message;
@@ -344,8 +230,7 @@
 
   function render(arr){
     resultsEl.innerHTML=''; if(!arr.length) return;
-    for(let i=0;i<arr.length;i++){
-      const r=arr[i];
+    arr.forEach((r,i)=>{
       const wrap=document.createElement('div');
       const th=document.createElement('div'); th.className='thumb';
       const img=document.createElement('img'); img.src=r.downloadUrl; img.alt=r.key||('item-'+(i+1));
@@ -355,39 +240,11 @@
       meta.innerHTML='item-'+(i+1)+'<br><span class="muted">score: '+Number(r.similarity||0).toFixed(3)+'</span>';
       wrap.appendChild(th); wrap.appendChild(meta);
       resultsEl.appendChild(wrap);
-    }
+    });
   }
 
-  go.onclick=search;
-  clr.onclick=()=>{ file.value=''; lastDataUrl=null; preview.classList.add('hidden'); work.classList.add('hidden'); box.classList.add('hidden'); cropToggle.classList.add('hidden'); useCrop.classList.add('hidden'); rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; };
-
-  // ===== Admin =====
-  adminToggle.onclick=()=> admin.classList.toggle('hidden');
-  const api=(path,opts={})=>fetch(root()+path,opts);
-
-  updateLinkBtn.onclick=async()=>{
-    try{
-      const body={ linkId:$('linkId').value, allowedFolders:$('folder').value.split(',').map(s=>s.trim()).filter(Boolean), expiresInHours:Number(expHours.value) };
-      const r=await api('/admin/update-link',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},body:JSON.stringify(body)});
-      logLine(await r.json()); toastMsg(r.ok?'Updated':'Error');
-    }catch(e){ logLine(e.message); toastMsg('Error'); }
-  };
-
-  loadFoldersBtn.onclick=async()=>{ try{ const r=await api('/admin/folders',{headers:{Authorization:'Bearer '+(admToken.value||'')}}); logLine(await r.json()); }catch(e){ logLine(e.message); } };
-
-  let selected=[]; multi.onchange=()=>{ selected=Array.from(multi.files||[]); upStat.textContent=selected.length+' files selected'; };
-  uploadBtn.onclick=async()=>{
-    if(!selected.length){ upStat.textContent='No files selected'; return; }
-    let ok=0,dup=0,err=0; uploadBtn.disabled=true; upStat.textContent='Uploading…';
-    for(const f of selected){
-      try{
-        const jpeg=await toJPEG(f,2000,0.98);
-        const r=await api('/admin/upload',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},body:JSON.stringify({folderId:$('folder').value,image:jpeg,imageBase64:jpeg})});
-        const j=await r.json(); if(j.duplicate) dup++; else ok++; logLine({file:f.name,result:j});
-      }catch(e){ err++; logLine({file:f.name,error:e.message}); }
-    }
-    uploadBtn.disabled=false; upStat.textContent=`Done: ${ok} ok, ${dup} duplicate, ${err} error`;
-  };
+  $('go').onclick=search;
+  $('clr').onclick=()=>{ file.value=''; preview.classList.add('hidden'); rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; };
 })();
 </script>
 </body>
