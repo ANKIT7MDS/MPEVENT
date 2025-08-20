@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Selfie Search • Admin (sudhirji)</title>
+<style>
+  :root{--bg:#0b0d10;--card:#12151a;--muted:#97a3b6;--brand:#f97316;--text:#edf2f7;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter}
+  .wrap{max-width:1120px;margin:0 auto;padding:16px}
+  .row{display:grid;gap:12px}
+  .card{background:var(--card);border:1px solid #1b2130;border-radius:18px;padding:16px}
+  .btn{background:var(--brand);color:#1b0a00;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:#0000;border:1px solid #293142;color:var(--text)}
+  .muted{color:var(--muted)}
+  .head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:999px;background:#0e1625;border:1px solid #20304a;color:#b6c3d9;font-size:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .drop{border:2px dashed #2a364d;border-radius:16px;padding:16px;text-align:center;background:#0f1522}
+  .drop.over{border-color:var(--brand);background:#121a2b}
+  .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+  .item{background:#0e141f;border:1px solid #1b2335;border-radius:14px;padding:10px;display:flex;gap:10px;align-items:center}
+  .thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid #233145;background:#0c111b}
+  progress{width:100%}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #1d2740;background:#0e1625;margin-right:6px}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  /* login */
+  .gate{position:fixed;inset:0;background:#0b0d10;display:flex;align-items:center;justify-content:center;z-index:50}
+  .gate .panel{background:#111522;border:1px solid #1b2130;border-radius:18px;padding:22px;max-width:360px;width:96%}
+  .input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #273148;background:#0d1220;color:var(--text)}
+  .row2{display:flex;gap:8px;align-items:center}
+  label.small{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- Login Gate (no hardcoded token) -->
+<div class="gate" id="gate">
+  <div class="panel">
+    <h3 style="margin:0 0 6px">Admin Login</h3>
+    <div class="muted" style="margin-bottom:10px">Upload से पहले पासवर्ड दर्ज करें</div>
+    <input id="pass" class="input" placeholder="Admin password" type="password" autocomplete="current-password"/>
+    <div class="row2" style="margin-top:10px">
+      <button id="login" class="btn" style="flex:1">Login</button>
+      <button id="show" class="btn ghost" style="width:110px">Show</button>
+      <label class="small"><input type="checkbox" id="remember"> Remember</label>
+    </div>
+    <div id="gateMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <div class="row">
+    <div class="card head">
+      <div class="badges">
+        <div class="badge">Admin Panel</div>
+        <div class="badge">API: <span id="apiState">checking…</span></div>
+        <div class="badge">Folder: <b>sudhirji</b></div>
+        <div class="badge">Session • <span id="sCount">0</span> files</div>
+      </div>
+      <div class="row2">
+        <span class="muted" id="maskTok" style="margin-right:8px"></span>
+        <button id="logout" class="btn ghost">Logout</button>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin:0 0 8px">⬆️ Upload to <code>sudhirji</code></h3>
+        <div id="drop" class="drop">
+          <div style="font-size:22px;margin-bottom:6px">Drag & Drop files here</div>
+          <div class="muted">or</div>
+          <div style="margin-top:6px">
+            <input id="pick" type="file" accept="image/*" multiple />
+          </div>
+          <div class="muted" style="margin-top:10px">
+            Any format accepted • auto-convert to JPEG • duplicate auto-skip
+          </div>
+        </div>
+
+        <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button id="start" class="btn">Start Upload</button>
+          <button id="clear" class="btn ghost">Clear List</button>
+          <span class="pill">Queued: <b id="q">0</b></span>
+          <span class="pill ok">OK: <b id="ok">0</b></span>
+          <span class="pill warn">Duplicate: <b id="dup">0</b></span>
+          <span class="pill err">Failed: <b id="fail">0</b></span>
+        </div>
+
+        <div style="margin-top:10px">
+          <progress id="bar" max="100" value="0"></progress>
+          <div id="progMsg" class="muted" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">📋 Queue</h3>
+        <div id="list" class="list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== FIXED API/FOLDER ===== */
+const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
+const URLS = { health: `${API_BASE}/health`, upload: `${API_BASE}/admin/upload` };
+const FOLDER_ID = "sudhirji";
+
+/* ===== Token storage (no hardcode) ===== */
+let ADMIN_TOKEN = null;            // runtime only
+const SS_KEY = "adm_token";        // sessionStorage
+const LS_KEY = "adm_token_saved";  // localStorage (if Remember)
+
+/* ===== Shortcuts ===== */
+const el = id => document.getElementById(id);
+
+/* ===== Login Gate ===== */
+(function initGate(){
+  // restore remembered
+  const saved = sessionStorage.getItem(SS_KEY) || localStorage.getItem(LS_KEY);
+  if(saved){ ADMIN_TOKEN=saved; openApp(); boot(); return; }
+
+  openGate();
+
+  el('show').onclick = ()=>{ const p=el('pass'); p.type = p.type==='password' ? 'text' : 'password'; };
+
+  el('login').onclick = ()=>{
+    const p = el('pass').value.trim();
+    if(!p){ el('gateMsg').textContent = 'Please enter password'; return; }
+    ADMIN_TOKEN = p;
+    // store
+    sessionStorage.setItem(SS_KEY, p);
+    if(el('remember').checked){ localStorage.setItem(LS_KEY, p); }
+    el('pass').value='';
+    openApp(); boot();
+  };
+
+  el('logout').onclick = doLogout;
+})();
+
+function openGate(){ el('gate').hidden=false; el('app').hidden=true; }
+function openApp(){  el('gate').hidden=true;  el('app').hidden=false; el('maskTok').textContent = 'Auth: •••••'; }
+function doLogout(){
+  ADMIN_TOKEN=null;
+  sessionStorage.removeItem(SS_KEY);
+  localStorage.removeItem(LS_KEY);
+  openGate();
+}
+
+/* ===== Boot after login ===== */
+async function boot(){
+  // Health
+  try{
+    const r=await fetch(URLS.health); const j=await r.json();
+    el('apiState').textContent = j.ok? 'OK':'error';
+  }catch{ el('apiState').textContent='error'; }
+
+  // Drag & Drop
+  const drop = el('drop');
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.add('over');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.remove('over');}));
+  drop.addEventListener('drop', e=> addToQueue([...(e.dataTransfer?.files || [])]));
+  el('pick').addEventListener('change', e=>{ addToQueue([...(e.target.files||[])]); e.target.value=''; });
+
+  el('start').onclick = startUpload;
+  el('clear').onclick = clearQueue;
+}
+
+/* ===== Queue state ===== */
+const queue = [];   // {file, url, state, note}
+let ok=0, dup=0, fail=0, done=0;
+
+function addToQueue(files){
+  files.forEach(f=>{
+    const u = URL.createObjectURL(f);
+    queue.push({file:f, url:u, state:'waiting', note:''});
+  });
+  renderQueue();
+}
+function clearQueue(){
+  queue.forEach(it=>URL.revokeObjectURL(it.url));
+  queue.length=0; ok=dup=fail=done=0;
+  el('bar').value=0; el('progMsg').textContent='';
+  renderQueue();
+}
+
+/* ===== Render ===== */
+function renderQueue(){
+  el('q').textContent = queue.length - done;
+  el('ok').textContent = ok; el('dup').textContent = dup; el('fail').textContent = fail;
+  el('sCount').textContent = done;
+
+  const list = el('list'); list.innerHTML='';
+  queue.forEach(it=>{
+    const div=document.createElement('div'); div.className='item';
+    div.innerHTML = `
+      <img class="thumb" src="${it.url}" alt="">
+      <div style="flex:1">
+        <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.file.name}</div>
+        <div class="muted" style="font-size:12px;margin:3px 0">${it.state}${it.note? ' • '+it.note:''}</div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+/* ===== Convert any → JPEG DataURL ===== */
+function fileToDataURL(file){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+}
+async function toJPEG(file){
+  const dataUrl = await fileToDataURL(file);
+  const img = new Image(); img.crossOrigin = "anonymous";
+  await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=dataUrl; });
+  const maxSide = 1600;
+  const scale = Math.min(1, maxSide/Math.max(img.width,img.height));
+  const W = Math.max(1, Math.round(img.width*scale));
+  const H = Math.max(1, Math.round(img.height*scale));
+  const c = document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx = c.getContext('2d'); ctx.drawImage(img,0,0,W,H);
+  return c.toDataURL('image/jpeg', 0.92);
+}
+
+/* ===== Uploader (3 parallel) ===== */
+async function startUpload(){
+  if(!ADMIN_TOKEN){ openGate(); return; }
+  if(queue.length===0){ alert('Add some files first'); return; }
+  el('bar').value=0; ok=dup=fail=done=0; renderQueue();
+
+  const MAX_CONC = 3; let idx=0, active=0;
+  await new Promise(resolve=>{
+    const next=()=>{
+      if(idx>=queue.length && active===0) return resolve();
+      while(active<MAX_CONC && idx<queue.length){
+        const cur = queue[idx++]; active++;
+        handleOne(cur).finally(()=>{ active--; el('bar').value = Math.round((done/queue.length)*100); el('progMsg').textContent = `${done}/${queue.length}`; renderQueue(); next(); });
+      }
+    }; next();
+  });
+}
+
+async function handleOne(item){
+  try{
+    item.state='converting'; renderQueue();
+    const jpeg = await toJPEG(item.file);
+
+    item.state='uploading'; renderQueue();
+    const r = await fetch(URLS.upload, {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "Authorization": `Bearer ${ADMIN_TOKEN}` },
+      body: JSON.stringify({ folderId: FOLDER_ID, imageBase64: jpeg })
+    });
+
+    // 401 → वापस लॉगिन दिखाएँ
+    if(r.status===401){ item.state='error'; item.note='Unauthorized'; fail++; done++; alert('Unauthorized / wrong password'); doLogout(); return; }
+
+    const j = await r.json();
+    if(j.duplicate){ dup++; item.state='done'; item.note='duplicate'; }
+    else if(j.ok){ ok++; item.state='done'; item.note='ok'; }
+    else { fail++; item.state='error'; item.note = (j.error||'server error'); }
+  }catch(e){
+    fail++; item.state='error'; item.note=String(e.message||e);
+  }finally{
+    done++;
+  }
+}
+</script>
+</body>
+</html>
