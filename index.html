@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Selfie Search — Final</title>
+  <title>Selfie Search — Final (UI Fixed)</title>
   <style>
     :root{ --line:#e5e7eb; --brand:#5b7cff; --ok:#10b981; --danger:#ef4444; --muted:#6b7280; }
     *{box-sizing:border-box}
@@ -15,7 +15,6 @@
     .btn.secondary{background:#1118270d;color:#111827;border:1px solid var(--line)}
     .btn.danger{background:var(--danger)}
     .hidden{display:none!important}
-    /* Camera preview small, capture will be higher-res */
     .camWrap{width:360px;max-width:100%}
     .media{width:100%;border-radius:12px;background:#000;border:1px solid var(--line)}
     input[type="range"]{width:220px}
@@ -51,9 +50,9 @@
 
       <div class="row" style="margin-top:6px">
         <label class="muted">Threshold</label>
-        <input id="th" type="range" min="0.30" max="0.95" step="0.01" value="0.45">
+        <input id="th" type="range" min="0.30" max="0.95" step="0.01" value="0.40">
         <label class="muted">Max</label>
-        <input id="mx" type="number" min="1" max="100" value="60">
+        <input id="mx" type="number" min="1" max="4096" value="100">
       </div>
 
       <div class="row" style="margin-top:10px">
@@ -111,14 +110,15 @@
 
 <script>
 (function(){
+  // ==== Prefill (hidden) ====
   // ===== Prefill (hidden) =====
-  const DEFAULTS = {
-    base:   'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search',
-    linkId: '757ffaf5908b',
-    folder: 'sudhirji',
-    threshold: 0.45,
-    max: 60
-  };
+const DEFAULTS = {
+  base:   'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search',
+  linkId: '757ffaf5908b',   // <- यही रखना है
+  folder: 'sudhirji',       // <- यही रखना है
+  threshold: 0.45,
+  max: 60
+};
 
   const $=(id)=>document.getElementById(id);
   const q=new URLSearchParams(location.search);
@@ -146,51 +146,38 @@
     catch{ apiBadge.textContent='API: Error'; }
   })();
 
-  // ===== Camera =====
+  // ==== Camera ====
   let stream=null, lastDataUrl=null;
-
   async function startCam(cons){ return await navigator.mediaDevices.getUserMedia(cons); }
 
   camStart.onclick = async()=>{
     try{
       camMsg.textContent='';
       if(!location.protocol.startsWith('https') && location.hostname!=='localhost'){
-        camMsg.textContent='कृपया साइट HTTPS पर खोलें (या localhost)।';
-        return;
+        camMsg.textContent='कृपया साइट HTTPS पर खोलें (या localhost)।'; return;
       }
       if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
       let s;
-      try{
-        // higher ideal to get better capture
-        s = await startCam({video:{facingMode:{ideal:'user'}, width:{ideal:1280}, height:{ideal:720}}, audio:false});
-      }catch{
-        s = await startCam({video:true, audio:false});
-      }
+      try{ s = await startCam({video:{facingMode:{ideal:'user'}, width:{ideal:1280}, height:{ideal:720}}, audio:false}); }
+      catch{ s = await startCam({video:true, audio:false}); }
       stream=s; video.srcObject=stream; await video.play().catch(()=>{});
-      video.classList.remove('hidden');
-      camCapture.classList.remove('hidden');
-      camStop.classList.remove('hidden');
-      camStart.classList.add('hidden');
-      preview.classList.add('hidden');
-      lastDataUrl=null;
-      toastMsg('Camera started');
+      video.classList.remove('hidden'); camCapture.classList.remove('hidden'); camStop.classList.remove('hidden'); camStart.classList.add('hidden');
+      preview.classList.add('hidden'); lastDataUrl=null; toastMsg('Camera started');
     }catch(err){
-      let msg='कैमरा चालू नहीं हुआ.';
-      if(err.name==='NotAllowedError') msg+=' परमिशन Allow करें।';
+      let msg='कैमरा चालू नहीं हुआ.'; if(err.name==='NotAllowedError') msg+=' परमिशन Allow करें।';
       else if(err.name==='NotFoundError') msg+=' कैमरा डिवाइस नहीं मिला।';
       else if(err.name==='NotReadableError') msg+=' कैमरा किसी और ऐप में व्यस्त है।';
-      camMsg.textContent=msg;
-      toastMsg(msg);
+      camMsg.textContent=msg; toastMsg(msg);
     }
   };
 
-  // Capture at 720px even though preview box is small
+  // Capture at 720px (better search), preview box छोटा
   camCapture.onclick = ()=>{
     if(!stream){ toastMsg('पहले कैमरा ऑन करें'); return; }
     const w=720, h=Math.round(w*(video.videoHeight/video.videoWidth || 3/4));
     canvas.width=w; canvas.height=h;
     const ctx=canvas.getContext('2d'); ctx.drawImage(video,0,0,w,h);
-    lastDataUrl = canvas.toDataURL('image/jpeg',0.98);  // higher quality
+    lastDataUrl = canvas.toDataURL('image/jpeg',0.98);
     preview.src=lastDataUrl; preview.classList.remove('hidden');
   };
 
@@ -199,7 +186,7 @@
     video.classList.add('hidden'); camCapture.classList.add('hidden'); camStop.classList.add('hidden'); camStart.classList.remove('hidden');
   };
 
-  // ===== File utils =====
+  // ==== File utils ====
   function readFileToDataURL(f){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(f); }); }
   function loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.crossOrigin='anonymous'; i.src=src; }); }
   async function toJPEG(input,maxSide=2000,q=0.98){
@@ -211,7 +198,9 @@
     return c.toDataURL('image/jpeg',q);
   }
 
-  // ===== Search =====
+  // ==== Search ====
+  function thrTo100(v){ const n=Number(v); return (n<=1?Math.round(n*100):Math.round(n)); }
+
   async function search(){
     try{
       go.disabled=true; rstat.textContent='सर्च हो रहा है…'; resultsEl.innerHTML='';
@@ -222,18 +211,26 @@
         data = await toJPEG(f,2000,0.98);
         preview.src=data; preview.classList.remove('hidden');
       }
-      // slider (0-1) -> 0-100 for backend
-      const thr100 = Math.round(Number($('th').value) * 100);
-      const maxN   = Number($('mx').value);
+
+      // DEBUG mode: ?mode=folders&folders=*  OR ?mode=folders&folders=MPevent,sudhirji
+      const mode = q.get('mode');
+      const foldersParam = q.get('folders');
+
+      const maxN   = Math.max(1, Math.min(4096, Number($('mx').value)));
+      const thr100 = thrTo100($('th').value);
 
       const payload={
-        image: data,               // for older code
-        imageBase64: data,         // for your current backend
-        linkId: linkId.value,
-        threshold: thr100,         // 0-100 scale
-        maxResults: maxN,          // both names to be safe
+        image: data,
+        imageBase64: data,
+        threshold: thr100,
+        maxResults: maxN,
         max: maxN
       };
+      if(mode === 'folders' && foldersParam){
+        payload.allowedFolders = foldersParam.split(',').map(s=>s.trim()).filter(Boolean);
+      }else{
+        payload.linkId = linkId.value;
+      }
 
       const r=await fetch(base.value,{
         method:'POST',
@@ -256,6 +253,7 @@
       const wrap=document.createElement('div');
       const th=document.createElement('div'); th.className='thumb';
       const img=document.createElement('img'); img.src=r.downloadUrl; img.alt=r.key||('item-'+(i+1));
+      img.onerror=()=>{ img.remove(); th.textContent='(preview failed)'; };
       th.appendChild(img);
       const meta=document.createElement('div'); meta.style.padding='6px';
       meta.innerHTML='item-'+(i+1)+'<br><span class="muted">score: '+Number(r.similarity||0).toFixed(3)+'</span>';
@@ -264,14 +262,14 @@
     });
   }
 
-  go.onclick = search;
-  clr.onclick = ()=>{ file.value=''; lastDataUrl=null; preview.classList.add('hidden'); rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; };
+  document.getElementById('go').onclick = search;
+  document.getElementById('clr').onclick = ()=>{ file.value=''; lastDataUrl=null; preview.classList.add('hidden'); rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; };
 
-  // ===== Admin =====
-  adminToggle.onclick = ()=> admin.classList.toggle('hidden');
+  // ==== Admin ====
+  document.getElementById('adminToggle').onclick = ()=> admin.classList.toggle('hidden');
   const api = (path, opts={}) => fetch(root()+path, opts);
 
-  updateLinkBtn.onclick = async()=>{
+  document.getElementById('updateLinkBtn').onclick = async()=>{
     try{
       const body={
         linkId: linkId.value,
@@ -288,7 +286,7 @@
     }catch(e){ logLine(e.message); toastMsg('Error'); }
   };
 
-  loadFoldersBtn.onclick = async()=>{
+  document.getElementById('loadFoldersBtn').onclick = async()=>{
     try{
       const r=await api('/admin/folders',{headers:{Authorization:'Bearer '+(admToken.value||'')}});
       logLine(await r.json());
@@ -296,8 +294,8 @@
   };
 
   let selected=[];
-  multi.onchange = ()=>{ selected = Array.from(multi.files||[]); upStat.textContent=selected.length+' files selected'; };
-  uploadBtn.onclick = async()=>{
+  document.getElementById('multi').onchange = ()=>{ selected = Array.from(multi.files||[]); upStat.textContent=selected.length+' files selected'; };
+  document.getElementById('uploadBtn').onclick = async()=>{
     if(!selected.length){ upStat.textContent='No files selected'; return; }
     let ok=0,dup=0,err=0; uploadBtn.disabled=true; upStat.textContent='Uploading…';
     for(const f of selected){
