@@ -28,23 +28,22 @@
   progress{width:100%}
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #1d2740;background:#0e1625;margin-right:6px}
   .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
-  /* login */
+  /* UI Password gate (overlay) */
   .gate{position:fixed;inset:0;background:#0b0d10;display:flex;align-items:center;justify-content:center;z-index:50}
   .gate .panel{background:#111522;border:1px solid #1b2130;border-radius:18px;padding:22px;max-width:360px;width:96%}
   .input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #273148;background:#0d1220;color:var(--text)}
   .row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   label.small{font-size:12px;color:var(--muted)}
-  details.adv summary{cursor:pointer;color:#b6c3d9}
 </style>
 </head>
 <body>
 
-<!-- UI Password Gate (client-side only) -->
+<!-- UI Password Gate -->
 <div class="gate" id="gate">
   <div class="panel">
     <h3 style="margin:0 0 6px">Admin Login (UI Password)</h3>
-    <div class="muted" style="margin-bottom:10px">यह पासवर्ड केवल UI खोलने के लिए है — backend token की जरूरत नहीं।</div>
-    <input id="uiPass" class="input" placeholder="UI Password (e.g. MP5331)" type="password" autocomplete="off"/>
+    <div class="muted" style="margin-bottom:10px">पासवर्ड भरते ही UI खुल जाएगा (backend token की ज़रूरत नहीं).</div>
+    <input id="uiPass" class="input" placeholder="UI Password" type="password" autocomplete="off"/>
     <div class="row2" style="margin-top:10px">
       <button id="login" class="btn" style="flex:1">Login</button>
       <button id="show" class="btn ghost" style="width:110px">Show</button>
@@ -54,6 +53,7 @@
   </div>
 </div>
 
+<!-- Admin App -->
 <div class="wrap" id="app" hidden>
   <div class="row">
     <div class="card head">
@@ -63,14 +63,6 @@
         <div class="badge">Session • <span id="sCount">0</span> files</div>
       </div>
       <div class="row2">
-        <details class="adv">
-          <summary>Advanced</summary>
-          <div class="muted" style="margin-top:6px">By default, upload बिना Authorization चलता है (यदि backend allow करता है)।</div>
-          <label class="small" style="display:block;margin-top:6px">
-            <input type="checkbox" id="useAuth"> Use Authorization header
-          </label>
-          <input id="admTok" class="input" placeholder="ADMIN TOKEN (optional)" style="margin-top:6px" />
-        </details>
         <button id="logout" class="btn ghost">Logout</button>
       </div>
     </div>
@@ -92,7 +84,6 @@
         <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button id="start" class="btn">Start Upload</button>
           <button id="clear" class="btn ghost">Clear List</button>
-          <label class="small"><input type="checkbox" id="askPin" checked> Ask PIN at upload</label>
           <span class="pill">Queued: <b id="q">0</b></span>
           <span class="pill ok">OK: <b id="ok">0</b></span>
           <span class="pill warn">Duplicate: <b id="dup">0</b></span>
@@ -115,56 +106,76 @@
 </div>
 
 <script>
-/* ===== FIXED API/FOLDER ===== */
+/* ========= FIXEDS ========= */
 const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
 const URLS = { health: `${API_BASE}/health`, upload: `${API_BASE}/admin/upload` };
 const FOLDER_ID = "sudhirji";
 
-/* ===== UI Password (client-side gate) ===== */
-const el = id => document.getElementById(id);
-const UI_KEY = "ui_ok";
-const UI_PW_KEY = "ui_pw_save"; // if Remember
+/* ===== UI Password (hardcoded) ===== */
+const REQUIRED_UI_PW = "MP5331";       // <<< यहीं आपका पासवर्ड फिक्स है
+const UI_KEY = "ui_ok";                // sessionStorage flag
+const UI_PW_KEY = "ui_pw_save";        // localStorage (Remember)
 
+/* ===== Shortcuts ===== */
+const el = id => document.getElementById(id);
+
+/* ===== Gate logic ===== */
 (function initGate(){
-  // force-login via #login
+  // #login जोड़कर खोलें तो जबरन लॉगिन स्क्रीन आए
   if(location.hash==="#login"){ localStorage.removeItem(UI_PW_KEY); sessionStorage.removeItem(UI_KEY); }
-  // auto-unlock if remembered
+
+  // पहले से सेव पासवर्ड मिला तो तभी अनलॉक करें जब वो REQUIRED_UI_PW हो
   const saved = localStorage.getItem(UI_PW_KEY);
-  if(saved){ sessionStorage.setItem(UI_KEY, "1"); openApp(); boot(); return; }
+  if(saved === REQUIRED_UI_PW){
+    sessionStorage.setItem(UI_KEY, "1");
+    openApp(); boot(); return;
+  }else{
+    localStorage.removeItem(UI_PW_KEY);
+  }
 
   openGate();
   el('show').onclick = ()=>{ const p=el('uiPass'); p.type = p.type==='password' ? 'text' : 'password'; };
-  el('login').onclick = ()=>{
+  el('login').onclick = tryLogin;
+  el('uiPass').addEventListener('keydown',e=>{ if(e.key==='Enter') tryLogin(); });
+  el('logout').onclick = doLogout;
+
+  function tryLogin(){
     const p = el('uiPass').value.trim();
     if(!p){ el('gateMsg').textContent='Please enter UI password'; return; }
-    sessionStorage.setItem(UI_KEY,"1");
+    if(p !== REQUIRED_UI_PW){ el('gateMsg').textContent='Wrong password'; return; }
+    sessionStorage.setItem(UI_KEY, "1");
     if(el('remember').checked){ localStorage.setItem(UI_PW_KEY, p); }
     el('uiPass').value='';
     openApp(); boot();
-  };
-  el('uiPass').addEventListener('keydown',e=>{ if(e.key==='Enter') el('login').click(); });
-  el('logout').onclick = ()=>{ localStorage.removeItem(UI_PW_KEY); sessionStorage.removeItem(UI_KEY); openGate(); };
+  }
 })();
 
 function openGate(){ el('gate').hidden=false; el('app').hidden=true; }
 function openApp(){  el('gate').hidden=true;  el('app').hidden=false; }
+function doLogout(){
+  localStorage.removeItem(UI_PW_KEY);
+  sessionStorage.removeItem(UI_KEY);
+  openGate();
+}
 
-/* ===== After login ===== */
+/* ========= App boot ========= */
 async function boot(){
-  // health just for info (will show error if blocked)
-  try{ const r=await fetch(URLS.health); const j=await r.json(); }catch(e){}
-  // drag n drop
+  // (Optional) Health ping — informational
+  try{ const r=await fetch(URLS.health); await r.json(); }catch(_){}
+
+  // Drag & Drop
   const drop = el('drop');
   ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.add('over');}));
   ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.remove('over');}));
   drop.addEventListener('drop', e=> addToQueue([...(e.dataTransfer?.files||[])]));
+
   el('pick').addEventListener('change', e=>{ addToQueue([...(e.target.files||[])]); e.target.value=''; });
 
   el('start').onclick = startUpload;
   el('clear').onclick = clearQueue;
 }
 
-/* ===== Queue state ===== */
+/* ========= Queue & Rendering ========= */
 const queue=[]; let ok=0,dup=0,fail=0,done=0;
 
 function addToQueue(files){
@@ -197,7 +208,7 @@ function renderQueue(){
   });
 }
 
-/* ===== Convert any → JPEG ===== */
+/* ========= Any → JPEG (client-side) ========= */
 function fileToDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
 async function toJPEG(file){
   const data=await fileToDataURL(file);
@@ -209,17 +220,10 @@ async function toJPEG(file){
   return c.toDataURL('image/jpeg',0.92);
 }
 
-/* ===== Upload (3 parallel) ===== */
+/* ========= Upload (3 parallel) ========= */
 async function startUpload(){
-  if(!sessionStorage.getItem("ui_ok")){ openGate(); return; }
+  if(!sessionStorage.getItem(UI_KEY)){ openGate(); return; }
   if(queue.length===0){ alert('Add some files first'); return; }
-
-  // Optional: Upload PIN (UI-only)
-  if(el('askPin').checked){
-    const pin = prompt('Enter Upload PIN');
-    if(!pin){ alert('Upload cancelled'); return; }
-    // UI-only check (आप चाहें तो PIN फिक्स/चेंज कर सकते हैं)
-  }
 
   el('bar').value=0; ok=dup=fail=done=0; renderQueue();
 
@@ -235,16 +239,6 @@ async function startUpload(){
   });
 }
 
-// helper to optionally add Authorization
-function authHeaders(){
-  const h={ "Content-Type":"application/json" };
-  if(el('useAuth').checked){
-    const tok = el('admTok').value.trim();
-    if(tok) h["Authorization"] = `Bearer ${tok}`;
-  }
-  return h;
-}
-
 async function handleOne(item){
   try{
     item.state='converting'; renderQueue();
@@ -253,22 +247,16 @@ async function handleOne(item){
     item.state='uploading'; renderQueue();
     const r=await fetch(URLS.upload,{
       method:"POST",
-      headers: authHeaders(),            // by default: NO Authorization
-      body: JSON.stringify({ folderId: "sudhirji", imageBase64: jpeg })
+      headers:{ "Content-Type":"application/json" },  // NO Authorization header (जैसा आपने कहा)
+      body: JSON.stringify({ folderId: FOLDER_ID, imageBase64: jpeg })
     });
 
-    let j={};
-    try{ j = await r.json(); }catch(_){}
-
-    if(r.status===401){
-      fail++; item.state='error'; item.note='401 Unauthorized (server needs token)';
-      el('note').textContent = '⚠️ Backend बिना Authorization अपलोड नहीं ले रहा। Advanced में "Use Authorization header" ON करके सही ADMIN TOKEN भरें या backend को बिना token allow करें.';
-    }else if(j.duplicate){
-      dup++; item.state='done'; item.note='duplicate';
-    }else if(j.ok){
-      ok++; item.state='done'; item.note='ok';
-    }else if(!r.ok){
+    let j={}; try{ j=await r.json(); }catch(_){}
+    if(j.duplicate){ dup++; item.state='done'; item.note='duplicate'; }
+    else if(j.ok){ ok++; item.state='done'; item.note='ok'; }
+    else if(!r.ok){
       fail++; item.state='error'; item.note = j.error || r.statusText;
+      if(r.status===401){ el('note').textContent='⚠️ Server 401 दे रहा है (backend token मांग रहा होगा)। बिना token चलाने हेतु backend को allow करना पड़ेगा.'; }
     }else{
       ok++; item.state='done'; item.note='ok';
     }
