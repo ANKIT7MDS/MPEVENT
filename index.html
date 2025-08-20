@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Selfie Search Pro — Final</title>
+  <title>Selfie Search Pro — Final (Hidden Config)</title>
   <style>
     :root{
       --bg:#f7f7fb; --fg:#0d1220; --muted:#6b7280; --card:#ffffff; --brand:#5b7cff; --ok:#12b981; --danger:#ef4444; --line:#e5e7eb;
@@ -60,22 +60,13 @@
     <section class="card">
       <div class="sec">
         <h3>इनपुट</h3>
-        <div class="row">
-          <div class="field">
-            <label>API Base (override करने के लिए)</label>
-            <input id="base" type="text" />
-          </div>
-          <div class="field">
-            <label>Link ID</label>
-            <input id="linkId" type="text" />
-          </div>
-          <div class="field">
-            <label>Folder (admin uploads)</label>
-            <input id="folder" type="text" />
-          </div>
-        </div>
 
-        <div class="hr"></div>
+        <!-- Hidden config (prefilled) -->
+        <div id="cfg" class="hidden">
+          <input id="base" type="hidden" />
+          <input id="linkId" type="hidden" />
+          <input id="folder" type="hidden" />
+        </div>
 
         <div class="row">
           <div class="field">
@@ -157,7 +148,7 @@
     max: 24
   };
 
-  // Query param override
+  // Query param override (optional)
   const q = new URLSearchParams(location.search);
   const $ = (id)=>document.getElementById(id);
   const base = $('base'); const linkId = $('linkId'); const folder = $('folder');
@@ -209,7 +200,7 @@
     try{
       const url = apiRoot() + '/health';
       const r = await fetch(url);
-      const j = await r.json();
+      await r.json();
       apiBadge.textContent = 'API: OK';
       apiBadge.style.background = '#dcfce7';
       apiBadge.style.borderColor = '#bbf7d0';
