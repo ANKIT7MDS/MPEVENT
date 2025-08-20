@@ -3,266 +3,315 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Selfie Search — Recall Booster</title>
+<title>Selfie Search • लोकसभा सांसद श्री सुधीर जी गुप्ता</title>
 <style>
-  :root{--line:#e5e7eb;--brand:#4f46e5;--ok:#10b981;--muted:#6b7280}
+  :root{
+    --bg1:#ff8a00; --bg2:#ff5e00; --line:#e5e7eb; --ink:#0b1220;
+    --brand:#f97316; --ink-muted:#6b7280;
+  }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#fafaff,#eef2ff);color:#0b1220}
-  .wrap{max-width:1120px;margin:0 auto;padding:14px}
-  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 8px rgba(15,23,42,.06);padding:14px}
-  .btn{border:none;background:var(--brand);color:#fff;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
-  .btn.secondary{background:#1118270d;color:#111827;border:1px solid var(--line)}
-  .hidden{display:none!important}
-  .muted{color:var(--muted)}
-  input[type="range"]{width:220px}
-  input[type="number"]{padding:10px;border:1px solid var(--line);border-radius:12px;width:110px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-  .thumb{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
-  .thumb img{width:100%;height:140px;object-fit:cover;display:block}
-  .badge{font-size:12px;border:1px solid var(--line);padding:5px 8px;border-radius:999px;background:#fff}
-  .hint{font-size:12px;color:var(--muted)}
+  body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--ink)}
+  .wrap{max-width:1180px;margin:0 auto;padding:14px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 8px rgba(15,23,42,.08);padding:14px}
+  .btn{border:none;background:var(--brand);color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .btn.outline{background:#fff;color:#111827;border:1px solid var(--line)}
+  .btn.ghost{background:#fff0;border:1px solid #ffffff66;color:#fff}
+  input[type="file"]{display:block}
+  .muted{color:var(--ink-muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+  .thumb{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .thumb img{width:100%;height:130px;object-fit:cover;display:block}
+  .pick{position:absolute;left:6px;top:6px;transform:scale(1.2);background:#fff8;padding:4px;border-radius:6px}
+  .hero{
+    position:relative;border-radius:16px;overflow:hidden;margin:14px 14px 0;height:210px;
+    background:#000 url('hero.jpg') center/cover no-repeat;
+  }
+  .hero::after{
+    content:""; position:absolute; inset:0; background:linear-gradient(90deg,#00000088,#00000033 50%,#0000);
+  }
+  .hero h1{
+    position:absolute; left:18px; bottom:18px; right:18px; margin:0; color:#fff; line-height:1.25;
+    text-shadow:0 2px 8px rgba(0,0,0,.5); font-weight:800; font-size:22px;
+  }
+  .pill{font-size:12px;border:1px solid var(--line);padding:6px 10px;border-radius:999px;background:#fff}
+  .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}
+  /* lightbox */
+  .lightbox{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:50}
+  .lightbox.show{display:flex}
+  .lb-img{max-width:92vw;max-height:86vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+  .lb-close{position:absolute;right:14px;top:14px;font-size:26px;color:#fff;background:#0008;border:1px solid #fff5;border-radius:10px;padding:6px 10px;cursor:pointer}
+  .nav{position:absolute;top:50%;transform:translateY(-50%);font-size:30px;color:#fff;background:#0006;border:1px solid #fff4;border-radius:999px;padding:6px 12px;cursor:pointer}
+  .nav.prev{left:10px} .nav.next{right:10px}
+  /* camera */
+  .cam{background:#1118270d;border:1px dashed var(--line);border-radius:12px;padding:10px}
+  video,canvas.preview{width:260px;max-width:100%;border-radius:10px;border:1px solid var(--line)}
+  .form-row{display:flex;gap:10px;flex-wrap:wrap}
+  .input{padding:10px;border:1px solid var(--line);border-radius:12px}
 </style>
 </head>
 <body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>लोकसभा सांसद श्री सुधीर जी गुप्ता के साथ आपकी तस्वीर — अपनी सेल्फी स्कैन कर यहाँ से प्राप्त करें</h1>
+</div>
+
 <div class="wrap">
-  <div class="row" style="justify-content:space-between">
-    <h2 style="margin:6px 0 12px">🟦 <b>Selfie Search</b> — Recall Booster</h2>
-    <span id="apiBadge" class="badge">API: —</span>
+  <div class="toolbar" style="color:#fff">
+    <span class="pill">API: <b id="apiState">—</b></span>
+    <span class="pill">Folder: <b>sudhirji</b></span>
   </div>
 
-  <div class="row" style="align-items:flex-start">
+  <div class="row" style="align-items:flex-start;margin-top:10px">
+    <!-- LEFT: Input -->
     <section class="card" style="flex:1 1 520px">
-      <h3>इनपुट</h3>
+      <h3 style="margin:4px 0 10px">इनपुट</h3>
 
-      <!-- Hidden defaults (LOCKED as requested) -->
-      <input id="base"   type="hidden">
-      <input id="linkId" type="hidden">
-      <input id="folder" type="hidden">
+      <!-- Hidden constants (LOCKED) -->
+      <input id="base"   type="hidden" value="https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search">
+      <input id="folder" type="hidden" value="sudhirji">
+      <input id="MAX"    type="hidden" value="200"><!-- overall max result cap -->
 
-      <div class="row" style="margin-top:6px">
-        <label class="muted">Threshold</label>
-        <input id="th" type="range" min="0.28" max="0.95" step="0.01" value="0.35">
-        <label class="muted">Max</label>
-        <input id="mx" type="number" min="1" max="4096" value="1024">
+      <div class="form-row" style="margin-bottom:8px">
+        <input id="name" class="input" placeholder="आपका नाम (वैकल्पिक)" />
+        <input id="phone" class="input" placeholder="मोबाइल नंबर (वैकल्पिक)" maxlength="14" />
       </div>
 
       <div class="row">
-        <label class="row" style="gap:6px"><input id="exh" type="checkbox" checked>Exhaustive</label>
-        <label class="row" style="gap:6px"><input id="deep" type="checkbox">Deep Exhaustive</label>
-        <label class="row" style="gap:6px"><input id="all" type="checkbox">All Folders (*)</label>
-        <span class="hint">Deep = और ज़्यादा क्रॉप (3×3 grid), रिकॉल ↑</span>
+        <div>
+          <label class="muted" style="display:block;margin-bottom:6px">फोटो अपलोड करें</label>
+          <input id="file" type="file" accept="image/*">
+        </div>
+
+        <div class="cam">
+          <div class="row" style="gap:6px;margin-bottom:6px">
+            <button id="openCam" class="btn outline">📷 कैमरा ऑन</button>
+            <button id="snap" class="btn outline" disabled>कैप्चर</button>
+          </div>
+          <video id="video" playsinline muted></video>
+          <canvas id="shot" class="preview" style="display:none"></canvas>
+        </div>
       </div>
 
       <div class="row" style="margin-top:10px">
-        <input id="file" type="file" accept="image/*">
-        <button id="go"  class="btn">सर्च करें</button>
-        <button id="clr" class="btn secondary">क्लियर</button>
+        <button id="search" class="btn">सर्च करें</button>
+        <button id="clear" class="btn outline">क्लियर</button>
+        <span id="hint" class="muted"></span>
       </div>
 
-      <div style="margin-top:10px">
-        <img id="preview" style="max-width:360px;border:1px solid var(--line);border-radius:12px;display:none" alt="preview">
-      </div>
-
-      <div id="hint" class="hint" style="margin-top:6px"></div>
+      <div id="previewWrap" style="margin-top:10px"></div>
     </section>
 
-    <section class="card" style="flex:1 1 480px">
-      <h3>रिज़ल्ट्स</h3>
-      <div id="rstat" class="muted">कोई रिज़ल्ट नहीं</div>
-      <div id="results" class="grid"></div>
+    <!-- RIGHT: Results -->
+    <section class="card" style="flex:1 1 520px">
+      <div class="toolbar">
+        <div class="row" style="gap:8px">
+          <button id="downloadSel" class="btn outline">डाउनलोड चयनित</button>
+          <span class="muted">चयनित: <b id="selCount">0</b></span>
+        </div>
+        <div class="row">
+          <button id="prevPage" class="btn outline">← पिछला</button>
+          <span class="muted">पेज <b id="pNow">1</b>/<b id="pAll">1</b></span>
+          <button id="nextPage" class="btn outline">अगला →</button>
+        </div>
+      </div>
+
+      <div id="status" class="muted" style="margin:8px 0">कोई रिज़ल्ट नहीं</div>
+      <div id="grid" class="grid"></div>
     </section>
   </div>
 </div>
 
+<!-- LIGHTBOX -->
+<div id="lightbox" class="lightbox" role="dialog" aria-modal="true">
+  <button class="lb-close" id="lbClose">✕</button>
+  <button class="nav prev" id="lbPrev">‹</button>
+  <img id="lbImg" class="lb-img" alt=""/>
+  <button class="nav next" id="lbNext">›</button>
+</div>
+
 <script>
 (function(){
-  // ===== Defaults (LOCKED) =====
-  const DEFAULTS = {
-    base:   'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search',
-    linkId: '757ffaf5908b',
-    folder: 'sudhirji',
-    threshold: 0.35,
-    max: 1024
+  // ---------- Elements ----------
+  const $ = id => document.getElementById(id);
+  const api = $('base').value;
+  const folder = $('folder').value;
+  const grid = $('grid');
+  const statusEl = $('status');
+  const selCount = $('selCount');
+  const pNow = $('pNow'), pAll = $('pAll');
+  const hint = $('hint');
+  const MAX_RESULTS = Number($('MAX').value) || 200;
+
+  // lightbox state
+  let allResults = [];       // full list (capped at MAX_RESULTS)
+  let page = 1, pageSize = 30;
+  let selected = new Set();  // keys
+  let slideIndex = -1;       // index inside current page
+
+  // ---------- API health ----------
+  (async () => {
+    try { const r=await fetch(api.replace(/\/search$/,'/health')); await r.json(); $('apiState').textContent='OK'; }
+    catch { $('apiState').textContent='Error'; }
+  })();
+
+  // ---------- Camera ----------
+  const video = $('video'), shot = $('shot');
+  let stream = null;
+  $('openCam').onclick = async () => {
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+      video.srcObject = stream; await video.play();
+      $('snap').disabled = false;
+    }catch(e){
+      alert('कैमरा अनुमति नहीं मिली: ' + e.message);
+    }
+  };
+  $('snap').onclick = async () => {
+    if(!video.videoWidth){ alert('कैमरा तैयार नहीं है'); return; }
+    shot.width = video.videoWidth; shot.height = video.videoHeight;
+    shot.getContext('2d').drawImage(video,0,0);
+    shot.style.display='block';
+    previewImage(shot.toDataURL('image/jpeg',0.98));
   };
 
-  const $=id=>document.getElementById(id);
-  const q=new URLSearchParams(location.search);
-
-  $('base').value   = q.get('base') || DEFAULTS.base;
-  $('linkId').value = q.get('link') || DEFAULTS.linkId;
-  $('folder').value = q.get('folder') || DEFAULTS.folder;
-  $('th').value     = q.get('threshold') || DEFAULTS.threshold;
-  $('mx').value     = q.get('max') || DEFAULTS.max;
-
-  const apiBadge=$('apiBadge'), preview=$('preview'), file=$('file');
-  const go=$('go'), clr=$('clr'), rstat=$('rstat'), resultsEl=$('results');
-  const exh=$('exh'), deep=$('deep'), all=$('all'), hint=$('hint');
-
-  const root=()=>$('base').value.replace(/\/search$/,'');
-  const thr100=v=>{const n=Number(v);return n<=1?Math.round(n*100):Math.round(n);};
-  const wait=ms=>new Promise(r=>setTimeout(r,ms));
-
-  // API health
-  (async()=>{ try{ const r=await fetch(root()+'/health'); await r.json(); apiBadge.textContent='API: OK'; }catch{ apiBadge.textContent='API: Error'; } })();
-
-  // helpers
-  function readFileToDataURL(f){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(f); }); }
-  function loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.crossOrigin='anonymous'; i.src=src; }); }
-  async function toJPEG(input,maxSide=2000,q=0.98){
-    const data=(typeof input==='string'&&input.startsWith('data:'))?input:await readFileToDataURL(input);
-    const img=await loadImage(data);
-    const s=Math.min(1,maxSide/Math.max(img.width,img.height));
-    const w=Math.round(img.width*s), h=Math.round(img.height*s);
-    const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
-    return c.toDataURL('image/jpeg',q);
-  }
-  async function dataURLToCanvas(data){
-    const img=await loadImage(data); const c=document.createElement('canvas'); c.width=img.width; c.height=img.height; c.getContext('2d').drawImage(img,0,0); return c;
-  }
-  function cropFromCanvas(c,rect){
-    const t=document.createElement('canvas'); t.width=rect.w; t.height=rect.h;
-    t.getContext('2d').drawImage(c,rect.x,rect.y,rect.w,rect.h,0,0,rect.w,rect.h);
-    return t.toDataURL('image/jpeg',0.98);
-  }
-
-  // crop generators
-  function smartCrops(W,H){
-    const crops=[];
-    // center squares
-    [0.90,0.75,0.60].forEach(f=>{
-      const s=Math.round(Math.min(W,H)*f);
-      crops.push({x:Math.round((W-s)/2),y:Math.round((H-s)/2),w:s,h:s});
-    });
-    // portrait tiles 3×2 (0.65W × 0.70H)
-    const pw=Math.round(W*0.65), ph=Math.round(H*0.70);
-    const xs=[0, Math.round((W-pw)/2), W-pw];
-    const ys=[Math.round(H*0.05), Math.round(H*0.18)];
-    xs.forEach(x=>ys.forEach(y=>crops.push({x,y,w:pw,h:ph})));
-    return crops;
-  }
-  function gridCrops(W,H){ // 3×3 grid with 10% overlap
-    const crops=[];
-    const nx=3, ny=3, ox=Math.round(W*0.10), oy=Math.round(H*0.10);
-    const cw=Math.round((W+ox)/nx), ch=Math.round((H+oy)/ny);
-    for(let j=0;j<ny;j++){
-      for(let i=0;i<nx;i++){
-        const x=i*cw - Math.round(ox/2);
-        const y=j*ch - Math.round(oy/2);
-        const r={x:Math.max(0,x),y:Math.max(0,y),w:Math.min(cw,W-(x)),h:Math.min(ch,H-(y))};
-        r.w=Math.max(40,r.w); r.h=Math.max(40,r.h);
-        crops.push(r);
-      }
+  // ---------- File handling ----------
+  $('file').addEventListener('change', async e=>{
+    if(e.target.files[0]){
+      const data = await fileToDataURL(e.target.files[0]);
+      previewImage(data);
     }
-    return crops;
+  });
+  function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
+
+  function previewImage(dataURL){
+    $('previewWrap').innerHTML = '<img src="'+dataURL+'" style="max-width:260px;border:1px solid #e5e7eb;border-radius:10px"/>';
+    $('previewWrap').dataset.img = dataURL;
   }
 
-  async function withRetry(fn, tries=3){
-    for(let t=1;t<=tries;t++){
-      try{ return await fn(); }catch(e){ if(t===tries) throw e; await wait(250*t); }
-    }
-  }
-  async function runQueue(items, fn, limit=3, progress){
-    let i=0, active=0, out=[];
-    return new Promise(resolve=>{
-      const next=()=>{
-        if(i===items.length && active===0) return resolve(out);
-        while(active<limit && i<items.length){
-          const cur=items[i++]; active++;
-          fn(cur).then(r=>{ out.push(r); }).catch(()=>{}).finally(()=>{ active--; progress && progress(i,items.length); next(); });
-        }
-      };
-      next();
-    });
-  }
+  // ---------- Search ----------
+  $('search').onclick = async ()=>{
+    const img = $('previewWrap').dataset.img;
+    if(!img){ alert('कृपया कैमरा से कैप्चर करें या फोटो चुनें'); return; }
 
-  function keyFromUrl(u){
-    try{ const url=new URL(u); return url.searchParams.get('Key') || url.pathname.replace(/^\/+/,''); }
-    catch{ return u; }
-  }
-  function dedupSort(list){
-    const map=new Map();
-    for(const it of list){
-      const k = it.key || keyFromUrl(it.downloadUrl);
-      if(!map.has(k) || Number(it.similarity||0) > Number(map.get(k).similarity||0)) map.set(k,it);
-    }
-    return Array.from(map.values()).sort((a,b)=>Number(b.similarity||0)-Number(a.similarity||0));
-  }
+    statusEl.textContent='खोज चालू है…';
+    grid.innerHTML=''; selected.clear(); updateSelected();
 
-  async function callSearch(data, maxN, thr){
-    const payload = {
-      image:data, imageBase64:data,
-      threshold:thr, maxResults:maxN, max:maxN
-    };
-    if(all.checked){
-      payload.allowedFolders=['*']; // बायपास फ़ोल्डर फ़िल्टर
-    }else{
-      payload.linkId = $('linkId').value;
-    }
-    const r = await withRetry(()=>fetch($('base').value,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}));
-    const j = await r.json(); if(!r.ok) throw new Error(j.error||r.statusText);
-    return j.results||[];
-  }
-
-  function render(arr){
-    resultsEl.innerHTML=''; if(!arr.length) return;
-    arr.forEach((r,i)=>{
-      const wrap=document.createElement('div');
-      const th=document.createElement('div'); th.className='thumb';
-      const img=document.createElement('img'); img.src=r.downloadUrl; img.alt=r.key||('item-'+(i+1));
-      img.onerror=()=>{ img.remove(); th.textContent='(preview failed)'; };
-      th.appendChild(img);
-      const meta=document.createElement('div'); meta.style.padding='6px';
-      meta.innerHTML='item-'+(i+1)+'<br><span class="muted">score: '+Number(r.similarity||0).toFixed(3)+'</span>';
-      wrap.appendChild(th); wrap.appendChild(meta);
-      resultsEl.appendChild(wrap);
-    });
-  }
-
-  async function search(){
     try{
-      go.disabled=true; rstat.textContent='सर्च हो रहा है…'; resultsEl.innerHTML='';
-      const f=file.files[0]; if(!f){ rstat.textContent='कृपया फोटो चुनें'; go.disabled=false; return; }
+      const payload = {
+        image: img, imageBase64: img,
+        threshold: 35,                // fixed (यूज़र से नहीं दिखाते)
+        maxResults: MAX_RESULTS,
+        allowedFolders: [folder]      // सिर्फ इसी फ़ोल्डर में
+      };
+      const r = await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error || r.statusText);
 
-      const baseImg=await toJPEG(f,2000,0.98);
-      preview.src=baseImg; preview.style.display='block';
-
-      const maxN=Math.max(1,Math.min(4096,Number($('mx').value)));
-      const thr=thr100($('th').value);
-
-      // Build pass list
-      const urls=[baseImg];
-      const passes=[];
-      if(exh.checked){
-        const c=await dataURLToCanvas(baseImg);
-        const W=c.width,H=c.height;
-        smartCrops(W,H).forEach(rc=>passes.push(cropFromCanvas(c,rc)));
-        if(deep.checked) gridCrops(W,H).forEach(rc=>passes.push(cropFromCanvas(c,rc)));
-      }
-      urls.push(...passes);
-
-      hint.textContent=`Passes: ${urls.length}  •  Threshold: ${$('th').value}  •  Max: ${maxN}  •  Folders: ${all.checked?'*':'via linkId'}`;
-
-      const allHits=[];
-      let done=0;
-      await runQueue(urls, async (u)=>{
-        const part=await callSearch(u,maxN,thr);
-        allHits.push(...part);
-        done++; rstat.textContent=`Pass ${done}/${urls.length} — raw hits: ${allHits.length}`;
-      }, 3, (i,n)=>{});
-
-      const final=dedupSort(allHits);
-      rstat.textContent=`${final.length} results`;
-      render(final);
+      // cap + render
+      allResults = (j.results || []).slice(0, MAX_RESULTS);
+      page = 1; renderPage();
     }catch(e){
-      rstat.textContent='फेल: '+e.message;
-    }finally{
-      go.disabled=false;
+      statusEl.textContent = 'त्रुटि: ' + e.message;
     }
+  };
+
+  $('clear').onclick = ()=>{
+    $('file').value='';
+    $('previewWrap').innerHTML='';
+    delete $('previewWrap').dataset.img;
+    grid.innerHTML=''; allResults=[]; page=1; renderPage();
+  };
+
+  // ---------- Render ----------
+  function renderPage(){
+    const total = allResults.length;
+    pAll.textContent = Math.max(1, Math.ceil(total/pageSize));
+    page = Math.min(Math.max(1,page), Number(pAll.textContent));
+    pNow.textContent = page;
+
+    $('prevPage').disabled = (page<=1);
+    $('nextPage').disabled = (page>=Number(pAll.textContent));
+
+    const start=(page-1)*pageSize, end=Math.min(start+pageSize, total);
+    const items = allResults.slice(start,end);
+
+    statusEl.textContent = total? `कुल ${total} परिणाम (पेज ${page}/${pAll.textContent})` : 'कोई रिज़ल्ट नहीं';
+    grid.innerHTML='';
+
+    items.forEach((it,idx)=>{
+      const k = it.key || (new URL(it.downloadUrl)).searchParams.get('Key') || it.downloadUrl;
+      const box = document.createElement('div'); box.className='thumb';
+
+      // select checkbox
+      const pick = document.createElement('input');
+      pick.type='checkbox'; pick.className='pick';
+      pick.checked = selected.has(k);
+      pick.onchange = ()=>{ if(pick.checked) selected.add(k); else selected.delete(k); updateSelected(); };
+      box.appendChild(pick);
+
+      // image
+      const img = document.createElement('img'); img.src = it.downloadUrl; img.alt='';
+      img.onclick = ()=> openLightbox(start+idx);   // absolute index for slider
+      img.onerror = ()=>{ img.remove(); };
+      box.appendChild(img);
+
+      grid.appendChild(box);
+    });
   }
 
-  go.onclick=search;
-  clr.onclick=()=>{ file.value=''; preview.style.display='none'; rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; hint.textContent=''; };
+  function updateSelected(){ selCount.textContent = selected.size; }
+
+  // pagination buttons
+  $('prevPage').onclick = ()=>{ page--; renderPage(); };
+  $('nextPage').onclick = ()=>{ page++; renderPage(); };
+
+  // ---------- Bulk download ----------
+  $('downloadSel').onclick = async ()=>{
+    if(selected.size===0){ alert('कोई फोटो चुनी नहीं गई'); return; }
+    const current = visibleItems(); // urls only for current page selection
+    const urls = current.filter(it=>selected.has(it.k)).map(it=>it.url);
+    if(!urls.length){ alert('चयनित फोटो इस पेज पर नहीं हैं'); return; }
+    hint.textContent = 'डाउनलोड शुरू…';
+    for(const u of urls){
+      await delay(250);
+      const a=document.createElement('a'); a.href=u; a.download=''; document.body.appendChild(a); a.click(); a.remove();
+    }
+    hint.textContent = 'डाउनलोड पूर्ण';
+  };
+  function visibleItems(){
+    const start=(page-1)*pageSize, end=Math.min(start+pageSize, allResults.length);
+    const slice=allResults.slice(start,end);
+    return slice.map(r=>{
+      const k = r.key || (new URL(r.downloadUrl)).searchParams.get('Key') || r.downloadUrl;
+      return {k, url:r.downloadUrl};
+    });
+  }
+  const delay=ms=>new Promise(r=>setTimeout(r,ms));
+
+  // ---------- Lightbox ----------
+  const lb = $('lightbox'), lbImg = $('lbImg');
+  function openLightbox(absIndex){
+    slideIndex = absIndex;
+    updateLightbox();
+    lb.classList.add('show');
+  }
+  function updateLightbox(){
+    if(slideIndex<0) return;
+    slideIndex = Math.min(Math.max(0, slideIndex), allResults.length-1);
+    lbImg.src = allResults[slideIndex].downloadUrl;
+  }
+  $('lbClose').onclick = ()=> lb.classList.remove('show');
+  $('lbPrev').onclick  = ()=>{ slideIndex--; updateLightbox(); };
+  $('lbNext').onclick  = ()=>{ slideIndex++; updateLightbox(); };
+  window.addEventListener('keydown',e=>{
+    if(!lb.classList.contains('show')) return;
+    if(e.key==='Escape') $('lbClose').click();
+    if(e.key==='ArrowLeft') $('lbPrev').click();
+    if(e.key==='ArrowRight') $('lbNext').click();
+  });
+
 })();
 </script>
 </body>
