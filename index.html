@@ -1,83 +1,87 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Selfie Search — Final (UI Fixed)</title>
-  <style>
-    :root{ --line:#e5e7eb; --brand:#5b7cff; --ok:#10b981; --danger:#ef4444; --muted:#6b7280; }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#fafaff,#eef2ff);color:#0d1220}
-    .wrap{max-width:1100px;margin:0 auto;padding:14px}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 8px rgba(15,23,42,.05);padding:14px}
-    .btn{border:none;background:var(--brand);color:#fff;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
-    .btn.secondary{background:#1118270d;color:#111827;border:1px solid var(--line)}
-    .btn.danger{background:var(--danger)}
-    .hidden{display:none!important}
-    .camWrap{width:360px;max-width:100%}
-    .media{width:100%;border-radius:12px;background:#000;border:1px solid var(--line)}
-    input[type="range"]{width:220px}
-    input[type="number"]{padding:10px;border:1px solid var(--line);border-radius:12px;width:90px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-    .thumb{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
-    .thumb img{display:block;width:100%;height:140px;object-fit:cover}
-    .muted{color:var(--muted)}
-    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.25);z-index:20}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Selfie Search — Final (Recall+Crop)</title>
+<style>
+  :root{--line:#e5e7eb;--brand:#5b7cff;--ok:#10b981;--danger:#ef4444;--muted:#6b7280}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#fafaff,#eef2ff);color:#0b1220}
+  .wrap{max-width:1100px;margin:0 auto;padding:14px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 8px rgba(15,23,42,.06);padding:14px}
+  .btn{border:none;background:var(--brand);color:#fff;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .btn.secondary{background:#1118270d;color:#111827;border:1px solid var(--line)}
+  .btn.danger{background:var(--danger)}
+  .hidden{display:none!important}
+  .camWrap{width:360px;max-width:100%;position:relative}
+  .media{width:100%;border-radius:12px;background:#000;border:1px solid var(--line)}
+  .overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+  .muted{color:var(--muted)}
+  input[type="range"]{width:220px}
+  input[type="number"]{padding:10px;border:1px solid var(--line);border-radius:12px;width:100px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+  .thumb{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .thumb img{width:100%;height:140px;object-fit:cover;display:block}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.25);z-index:20}
+  .badge{font-size:12px;border:1px solid var(--line);padding:5px 8px;border-radius:999px;background:#fff}
+</style>
 </head>
 <body>
 <div class="wrap">
   <div class="row" style="justify-content:space-between">
-    <h2 style="margin:8px 0 12px">🟦 <b>Selfie Search</b> — Final</h2>
+    <h2 style="margin:6px 0 12px">🟦 <b>Selfie Search</b> — Final</h2>
     <div class="row">
-      <div id="apiBadge" class="muted">API: —</div>
-      <button id="adminToggle" class="btn secondary" style="margin-left:10px">Admin Panel</button>
+      <span id="apiBadge" class="badge">API: —</span>
+      <button id="adminToggle" class="btn secondary">Admin Panel</button>
     </div>
   </div>
 
-  <div class="row" style="margin-top:10px;align-items:flex-start">
-    <!-- Left -->
+  <div class="row" style="align-items:flex-start">
     <section class="card" style="flex:1 1 520px">
       <h3>इनपुट</h3>
 
-      <!-- Hidden config (prefilled) -->
+      <!-- hidden defaults -->
       <div class="hidden">
-        <input id="base"   type="hidden" />
-        <input id="linkId" type="hidden" />
-        <input id="folder" type="hidden" />
+        <input id="base" type="hidden"/>
+        <input id="linkId" type="hidden"/>
+        <input id="folder" type="hidden"/>
       </div>
 
       <div class="row" style="margin-top:6px">
         <label class="muted">Threshold</label>
-        <input id="th" type="range" min="0.30" max="0.95" step="0.01" value="0.40">
+        <input id="th" type="range" min="0.30" max="0.95" step="0.01" value="0.38">
         <label class="muted">Max</label>
-        <input id="mx" type="number" min="1" max="4096" value="100">
+        <input id="mx" type="number" min="1" max="4096" value="200">
+        <label class="row muted" style="gap:6px"><input id="enh" type="checkbox" checked>Enhanced</label>
       </div>
 
       <div class="row" style="margin-top:10px">
         <input id="file" type="file" accept="image/*">
-        <button id="go"  class="btn">सर्च करें</button>
+        <button id="go" class="btn">सर्च करें</button>
         <button id="clr" class="btn secondary">क्लियर</button>
       </div>
 
       <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
 
       <div class="row">
-        <button id="camStart"   class="btn secondary">कैमरा ऑन</button>
+        <button id="camStart" class="btn secondary">कैमरा ऑन</button>
         <button id="camCapture" class="btn hidden" style="background:var(--ok)">कैप्चर</button>
-        <button id="camStop"    class="btn danger hidden">बंद करें</button>
+        <button id="camStop" class="btn danger hidden">बंद करें</button>
+        <button id="cropToggle" class="btn secondary hidden">Crop मोड</button>
+        <button id="useCrop" class="btn hidden">Crop Apply</button>
       </div>
 
       <div class="camWrap" style="margin-top:10px">
-        <video  id="video"   class="media hidden" autoplay playsinline muted></video>
-        <canvas id="canvas"  class="hidden"></canvas>
-        <img    id="preview" class="media hidden" alt="preview"/>
+        <video id="video" class="media hidden" autoplay playsinline muted></video>
+        <img id="preview" class="media hidden" alt="preview"/>
+        <canvas id="work" class="media hidden"></canvas>
+        <canvas id="box" class="overlay hidden"></canvas>
       </div>
       <div id="camMsg" class="muted" style="margin-top:6px"></div>
     </section>
 
-    <!-- Right -->
     <section class="card" style="flex:1 1 480px">
       <h3>रिज़ल्ट्स</h3>
       <div id="rstat" class="muted">कोई रिज़ल्ट नहीं</div>
@@ -85,7 +89,6 @@
     </section>
   </div>
 
-  <!-- Admin -->
   <section id="admin" class="card hidden" style="margin-top:12px">
     <h3>🔐 Admin Panel</h3>
     <div class="row">
@@ -96,7 +99,6 @@
       <button id="updateLinkBtn" class="btn">Update Link</button>
       <button id="loadFoldersBtn" class="btn secondary">Load Folders</button>
     </div>
-
     <div class="row" style="margin-top:10px">
       <input id="multi" type="file" multiple accept="image/*">
       <button id="uploadBtn" class="btn">Upload Selected</button>
@@ -110,17 +112,16 @@
 
 <script>
 (function(){
-  // ==== Prefill (hidden) ====
-  // ===== Prefill (hidden) =====
-const DEFAULTS = {
-  base:   'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search',
-  linkId: '757ffaf5908b',   // <- यही रखना है
-  folder: 'sudhirji',       // <- यही रखना है
-  threshold: 0.45,
-  max: 60
-};
+  // ===== Defaults (as requested) =====
+  const DEFAULTS = {
+    base:   'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search',
+    linkId: '757ffaf5908b',
+    folder: 'sudhirji',
+    threshold: 0.38,
+    max: 200
+  };
 
-  const $=(id)=>document.getElementById(id);
+  const $=id=>document.getElementById(id);
   const q=new URLSearchParams(location.search);
   $('base').value   = q.get('base') || DEFAULTS.base;
   $('linkId').value = q.get('link') || DEFAULTS.linkId;
@@ -128,65 +129,27 @@ const DEFAULTS = {
   $('th').value     = q.get('threshold') || DEFAULTS.threshold;
   $('mx').value     = q.get('max') || DEFAULTS.max;
 
-  const base=$('base'), linkId=$('linkId'), folder=$('folder');
   const apiBadge=$('apiBadge'), resultsEl=$('results'), rstat=$('rstat');
-  const file=$('file'), go=$('go'), clr=$('clr');
+  const file=$('file'), go=$('go'), clr=$('clr'), enh=$('enh');
   const camStart=$('camStart'), camCapture=$('camCapture'), camStop=$('camStop');
-  const video=$('video'), canvas=$('canvas'), preview=$('preview'), camMsg=$('camMsg');
+  const preview=$('preview'), video=$('video'), work=$('work'), box=$('box');
+  const camMsg=$('camMsg'), cropToggle=$('cropToggle'), useCrop=$('useCrop');
   const admin=$('admin'), adminToggle=$('adminToggle'), admToken=$('admToken'), expHours=$('expHours');
   const updateLinkBtn=$('updateLinkBtn'), loadFoldersBtn=$('loadFoldersBtn'), multi=$('multi'), uploadBtn=$('uploadBtn'), upStat=$('upStat'), log=$('log');
   const toast=$('toast');
 
-  const root = ()=> base.value.replace(/\/search$/, '');
-  const toastMsg = (m)=>{ toast.textContent=m; toast.classList.remove('hidden'); setTimeout(()=>toast.classList.add('hidden'),2500); };
-  const logLine  = (x)=>{ log.textContent += (typeof x==='string'?x:JSON.stringify(x)) + '\n'; log.scrollTop = log.scrollHeight; };
+  const root = ()=> $('base').value.replace(/\/search$/,'');
+  const toastMsg = m => { toast.textContent=m; toast.classList.remove('hidden'); setTimeout(()=>toast.classList.add('hidden'),2200); };
+  const logLine  = x => { log.textContent += (typeof x==='string'?x:JSON.stringify(x))+'\n'; log.scrollTop = log.scrollHeight; };
+  const thr100 = v => { const n=Number(v); return n<=1?Math.round(n*100):Math.round(n); };
 
-  (async function health(){
+  // --- API health
+  (async function(){
     try{ const r=await fetch(root()+'/health'); await r.json(); apiBadge.textContent='API: OK'; }
     catch{ apiBadge.textContent='API: Error'; }
   })();
 
-  // ==== Camera ====
-  let stream=null, lastDataUrl=null;
-  async function startCam(cons){ return await navigator.mediaDevices.getUserMedia(cons); }
-
-  camStart.onclick = async()=>{
-    try{
-      camMsg.textContent='';
-      if(!location.protocol.startsWith('https') && location.hostname!=='localhost'){
-        camMsg.textContent='कृपया साइट HTTPS पर खोलें (या localhost)।'; return;
-      }
-      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-      let s;
-      try{ s = await startCam({video:{facingMode:{ideal:'user'}, width:{ideal:1280}, height:{ideal:720}}, audio:false}); }
-      catch{ s = await startCam({video:true, audio:false}); }
-      stream=s; video.srcObject=stream; await video.play().catch(()=>{});
-      video.classList.remove('hidden'); camCapture.classList.remove('hidden'); camStop.classList.remove('hidden'); camStart.classList.add('hidden');
-      preview.classList.add('hidden'); lastDataUrl=null; toastMsg('Camera started');
-    }catch(err){
-      let msg='कैमरा चालू नहीं हुआ.'; if(err.name==='NotAllowedError') msg+=' परमिशन Allow करें।';
-      else if(err.name==='NotFoundError') msg+=' कैमरा डिवाइस नहीं मिला।';
-      else if(err.name==='NotReadableError') msg+=' कैमरा किसी और ऐप में व्यस्त है।';
-      camMsg.textContent=msg; toastMsg(msg);
-    }
-  };
-
-  // Capture at 720px (better search), preview box छोटा
-  camCapture.onclick = ()=>{
-    if(!stream){ toastMsg('पहले कैमरा ऑन करें'); return; }
-    const w=720, h=Math.round(w*(video.videoHeight/video.videoWidth || 3/4));
-    canvas.width=w; canvas.height=h;
-    const ctx=canvas.getContext('2d'); ctx.drawImage(video,0,0,w,h);
-    lastDataUrl = canvas.toDataURL('image/jpeg',0.98);
-    preview.src=lastDataUrl; preview.classList.remove('hidden');
-  };
-
-  camStop.onclick = ()=>{
-    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-    video.classList.add('hidden'); camCapture.classList.add('hidden'); camStop.classList.add('hidden'); camStart.classList.remove('hidden');
-  };
-
-  // ==== File utils ====
+  // ===== Helpers =====
   function readFileToDataURL(f){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(f); }); }
   function loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.crossOrigin='anonymous'; i.src=src; }); }
   async function toJPEG(input,maxSide=2000,q=0.98){
@@ -197,9 +160,134 @@ const DEFAULTS = {
     const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
     return c.toDataURL('image/jpeg',q);
   }
+  function dataURLToCanvas(data){
+    const c=document.createElement('canvas'), ctx=c.getContext('2d');
+    return loadImage(data).then(img=>{ c.width=img.width; c.height=img.height; ctx.drawImage(img,0,0); return c; });
+  }
 
-  // ==== Search ====
-  function thrTo100(v){ const n=Number(v); return (n<=1?Math.round(n*100):Math.round(n)); }
+  // ===== Camera =====
+  let stream=null, lastDataUrl=null;
+  async function startCam(cons){ return await navigator.mediaDevices.getUserMedia(cons); }
+
+  camStart.onclick=async()=>{
+    try{
+      camMsg.textContent='';
+      if(!location.protocol.startsWith('https') && location.hostname!=='localhost'){
+        camMsg.textContent='साइट HTTPS पर खोलें (या localhost)।'; return;
+      }
+      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+      let s;
+      try{ s=await startCam({video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:720}},audio:false}); }
+      catch{ s=await startCam({video:true,audio:false}); }
+      stream=s; video.srcObject=stream; await video.play().catch(()=>{});
+      video.classList.remove('hidden'); camCapture.classList.remove('hidden'); camStop.classList.remove('hidden'); camStart.classList.add('hidden');
+      preview.classList.add('hidden'); work.classList.add('hidden'); box.classList.add('hidden'); cropToggle.classList.add('hidden'); useCrop.classList.add('hidden');
+      lastDataUrl=null; toastMsg('Camera started');
+    }catch(err){
+      let msg='कैमरा चालू नहीं हुआ.'; if(err.name==='NotAllowedError') msg+=' परमिशन Allow करें।';
+      else if(err.name==='NotFoundError') msg+=' कैमरा डिवाइस नहीं मिला।';
+      else if(err.name==='NotReadableError') msg+=' कैमरा किसी और ऐप में व्यस्त है।';
+      camMsg.textContent=msg; toastMsg(msg);
+    }
+  };
+
+  camCapture.onclick=()=>{
+    if(!stream){ toastMsg('पहले कैमरा ऑन करें'); return; }
+    const w=720, h=Math.round(w*(video.videoHeight/video.videoWidth||3/4));
+    const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(video,0,0,w,h);
+    lastDataUrl=c.toDataURL('image/jpeg',0.98);
+    preview.src=lastDataUrl; preview.classList.remove('hidden');
+    video.classList.add('hidden');
+    cropToggle.classList.remove('hidden'); // allow cropping on captured frame
+  };
+
+  camStop.onclick=()=>{
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    video.classList.add('hidden'); camCapture.classList.add('hidden'); camStop.classList.add('hidden'); camStart.classList.remove('hidden');
+  };
+
+  // ===== Crop Mode (manual) =====
+  let cropMode=false, crop={x:0,y:0,w:0,h:0}, dragging=false, start={x:0,y:0};
+  function showCanvas(dataUrl){
+    preview.classList.add('hidden');
+    work.classList.remove('hidden'); box.classList.remove('hidden');
+    loadImage(dataUrl).then(img=>{
+      work.width=img.width; work.height=img.height;
+      box.width=img.width; box.height=img.height;
+      work.getContext('2d').drawImage(img,0,0);
+    });
+  }
+  function drawBox(){
+    const ctx=box.getContext('2d');
+    ctx.clearRect(0,0,box.width,box.height);
+    if(crop.w<=0||crop.h<=0) return;
+    ctx.strokeStyle='#22c55e'; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+    ctx.strokeRect(crop.x,crop.y,crop.w,crop.h);
+  }
+  function canvasPos(e){
+    const r=work.getBoundingClientRect();
+    const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    // scale for CSS size -> canvas size
+    const sx=work.width/r.width, sy=work.height/r.height;
+    return {x:Math.max(0,Math.min(work.width, x*sx)), y:Math.max(0,Math.min(work.height, y*sy))};
+  }
+
+  cropToggle.onclick=()=>{
+    if(!lastDataUrl){ toastMsg('पहले फोटो चुनें/कैप्चर करें'); return; }
+    cropMode=!cropMode;
+    if(cropMode){ showCanvas(lastDataUrl); useCrop.classList.remove('hidden'); cropToggle.textContent='Crop Off'; }
+    else{ work.classList.add('hidden'); box.classList.add('hidden'); useCrop.classList.add('hidden'); preview.classList.remove('hidden'); cropToggle.textContent='Crop मोड'; }
+  };
+  function bindCrop(){
+    ['mousedown','touchstart'].forEach(ev=>work.addEventListener(ev,e=>{ if(!cropMode)return; dragging=true; const p=canvasPos(e); start=p; crop={x:p.x,y:p.y,w:0,h:0}; drawBox(); }));
+    ['mousemove','touchmove'].forEach(ev=>work.addEventListener(ev,e=>{ if(!dragging||!cropMode)return; const p=canvasPos(e); crop.w=p.x-start.x; crop.h=p.y-start.y; if(crop.w<0){crop.x=p.x; crop.w=Math.abs(crop.w);} if(crop.h<0){crop.y=p.y; crop.h=Math.abs(crop.h);} drawBox(); },{passive:false}));
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>work.addEventListener(ev,()=>{ dragging=false; }));
+  } bindCrop();
+
+  useCrop.onclick=()=>{
+    if(!crop.w||!crop.h){ toastMsg('पहले selection बनायें'); return; }
+    const c=document.createElement('canvas'); c.width=crop.w; c.height=crop.h;
+    c.getContext('2d').drawImage(work,crop.x,crop.y,crop.w,crop.h,0,0,crop.w,crop.h);
+    lastDataUrl=c.toDataURL('image/jpeg',0.98);
+    preview.src=lastDataUrl; preview.classList.remove('hidden');
+    work.classList.add('hidden'); box.classList.add('hidden'); useCrop.classList.add('hidden'); cropToggle.textContent='Crop मोड'; cropMode=false;
+  };
+
+  // ===== Search =====
+  async function callSearch(data, maxN, thr){
+    // debug mode to bypass link
+    const mode=q.get('mode'), foldersParam=q.get('folders');
+    const payload={
+      image:data,
+      imageBase64:data,
+      threshold:thr,
+      maxResults:maxN,
+      max:maxN
+    };
+    if(mode==='folders' && foldersParam){
+      payload.allowedFolders=foldersParam.split(',').map(s=>s.trim()).filter(Boolean);
+    }else{
+      payload.linkId=$('linkId').value;
+    }
+    const r=await fetch($('base').value,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||r.statusText);
+    return j.results||[];
+  }
+
+  function dedupSort(all){
+    const map=new Map();
+    for(const it of all){
+      const k= it.key || it.downloadUrl;
+      if(!map.has(k)) map.set(k, it);
+      else{
+        // keep higher similarity
+        if(Number(it.similarity||0) > Number(map.get(k).similarity||0)) map.set(k,it);
+      }
+    }
+    return Array.from(map.values()).sort((a,b)=>Number(b.similarity||0)-Number(a.similarity||0));
+  }
 
   async function search(){
     try{
@@ -208,38 +296,45 @@ const DEFAULTS = {
       if(!data){
         const f=file.files[0];
         if(!f){ rstat.textContent='कृपया फोटो चुनें या कैमरा से कैप्चर करें'; go.disabled=false; return; }
-        data = await toJPEG(f,2000,0.98);
+        data=await toJPEG(f,2000,0.98);
         preview.src=data; preview.classList.remove('hidden');
+        cropToggle.classList.remove('hidden');
+      }
+      const maxN=Math.max(1, Math.min(4096, Number($('mx').value)));
+      const thr=thr100($('th').value);
+
+      // pass-1: full image
+      let all=await callSearch(data, maxN, thr);
+
+      // Enhanced: try some crops (center/portrait) to improve recall
+      if(enh.checked){
+        const baseCanvas=await dataURLToCanvas(data);
+        const W=baseCanvas.width, H=baseCanvas.height, ctx=baseCanvas.getContext('2d');
+
+        const crops=[];
+        // center square 70%
+        const s=Math.round(Math.min(W,H)*0.7);
+        crops.push({x:Math.round((W-s)/2), y:Math.round((H-s)/2), w:s, h:s});
+        // upper-center portrait
+        const pw=Math.round(W*0.55), ph=Math.round(H*0.65);
+        crops.push({x:Math.round((W-pw)/2), y:Math.round(H*0.08), w:pw, h:ph});
+        // mid portrait
+        crops.push({x:Math.round((W-pw)/2), y:Math.round(H*0.18), w:pw, h:ph});
+
+        for(const c of crops){
+          const tmp=document.createElement('canvas'); tmp.width=c.w; tmp.height=c.h;
+          tmp.getContext('2d').drawImage(baseCanvas,c.x,c.y,c.w,c.h,0,0,c.w,c.h);
+          const d=tmp.toDataURL('image/jpeg',0.98);
+          try{
+            const part=await callSearch(d, maxN, thr);
+            all=all.concat(part);
+          }catch(e){ /* ignore single pass errors */ }
+        }
       }
 
-      // DEBUG mode: ?mode=folders&folders=*  OR ?mode=folders&folders=MPevent,sudhirji
-      const mode = q.get('mode');
-      const foldersParam = q.get('folders');
-
-      const maxN   = Math.max(1, Math.min(4096, Number($('mx').value)));
-      const thr100 = thrTo100($('th').value);
-
-      const payload={
-        image: data,
-        imageBase64: data,
-        threshold: thr100,
-        maxResults: maxN,
-        max: maxN
-      };
-      if(mode === 'folders' && foldersParam){
-        payload.allowedFolders = foldersParam.split(',').map(s=>s.trim()).filter(Boolean);
-      }else{
-        payload.linkId = linkId.value;
-      }
-
-      const r=await fetch(base.value,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-      const j=await r.json(); if(!r.ok) throw new Error(j.error||r.statusText);
-      rstat.textContent=(j.count||0)+' results';
-      render(j.results||[]);
+      const final=dedupSort(all);
+      rstat.textContent=final.length+' results';
+      render(final);
     }catch(e){
       rstat.textContent='फेल: '+e.message;
     }finally{
@@ -249,7 +344,8 @@ const DEFAULTS = {
 
   function render(arr){
     resultsEl.innerHTML=''; if(!arr.length) return;
-    arr.forEach((r,i)=>{
+    for(let i=0;i<arr.length;i++){
+      const r=arr[i];
       const wrap=document.createElement('div');
       const th=document.createElement('div'); th.className='thumb';
       const img=document.createElement('img'); img.src=r.downloadUrl; img.alt=r.key||('item-'+(i+1));
@@ -259,54 +355,34 @@ const DEFAULTS = {
       meta.innerHTML='item-'+(i+1)+'<br><span class="muted">score: '+Number(r.similarity||0).toFixed(3)+'</span>';
       wrap.appendChild(th); wrap.appendChild(meta);
       resultsEl.appendChild(wrap);
-    });
+    }
   }
 
-  document.getElementById('go').onclick = search;
-  document.getElementById('clr').onclick = ()=>{ file.value=''; lastDataUrl=null; preview.classList.add('hidden'); rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; };
+  go.onclick=search;
+  clr.onclick=()=>{ file.value=''; lastDataUrl=null; preview.classList.add('hidden'); work.classList.add('hidden'); box.classList.add('hidden'); cropToggle.classList.add('hidden'); useCrop.classList.add('hidden'); rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; };
 
-  // ==== Admin ====
-  document.getElementById('adminToggle').onclick = ()=> admin.classList.toggle('hidden');
-  const api = (path, opts={}) => fetch(root()+path, opts);
+  // ===== Admin =====
+  adminToggle.onclick=()=> admin.classList.toggle('hidden');
+  const api=(path,opts={})=>fetch(root()+path,opts);
 
-  document.getElementById('updateLinkBtn').onclick = async()=>{
+  updateLinkBtn.onclick=async()=>{
     try{
-      const body={
-        linkId: linkId.value,
-        allowedFolders: $('folder').value.split(',').map(s=>s.trim()).filter(Boolean),
-        expiresInHours: Number(expHours.value)
-      };
-      const r=await api('/admin/update-link',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},
-        body:JSON.stringify(body)
-      });
-      logLine(await r.json());
-      toastMsg(r.ok?'Updated':'Error');
+      const body={ linkId:$('linkId').value, allowedFolders:$('folder').value.split(',').map(s=>s.trim()).filter(Boolean), expiresInHours:Number(expHours.value) };
+      const r=await api('/admin/update-link',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},body:JSON.stringify(body)});
+      logLine(await r.json()); toastMsg(r.ok?'Updated':'Error');
     }catch(e){ logLine(e.message); toastMsg('Error'); }
   };
 
-  document.getElementById('loadFoldersBtn').onclick = async()=>{
-    try{
-      const r=await api('/admin/folders',{headers:{Authorization:'Bearer '+(admToken.value||'')}});
-      logLine(await r.json());
-    }catch(e){ logLine(e.message); }
-  };
+  loadFoldersBtn.onclick=async()=>{ try{ const r=await api('/admin/folders',{headers:{Authorization:'Bearer '+(admToken.value||'')}}); logLine(await r.json()); }catch(e){ logLine(e.message); } };
 
-  let selected=[];
-  document.getElementById('multi').onchange = ()=>{ selected = Array.from(multi.files||[]); upStat.textContent=selected.length+' files selected'; };
-  document.getElementById('uploadBtn').onclick = async()=>{
+  let selected=[]; multi.onchange=()=>{ selected=Array.from(multi.files||[]); upStat.textContent=selected.length+' files selected'; };
+  uploadBtn.onclick=async()=>{
     if(!selected.length){ upStat.textContent='No files selected'; return; }
     let ok=0,dup=0,err=0; uploadBtn.disabled=true; upStat.textContent='Uploading…';
     for(const f of selected){
       try{
         const jpeg=await toJPEG(f,2000,0.98);
-        const body={ folderId:$('folder').value, image:jpeg, imageBase64:jpeg };
-        const r=await api('/admin/upload',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},
-          body:JSON.stringify(body)
-        });
+        const r=await api('/admin/upload',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},body:JSON.stringify({folderId:$('folder').value,image:jpeg,imageBase64:jpeg})});
         const j=await r.json(); if(j.duplicate) dup++; else ok++; logLine({file:f.name,result:j});
       }catch(e){ err++; logLine({file:f.name,error:e.message}); }
     }
