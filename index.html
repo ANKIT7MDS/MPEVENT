@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="hi" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Selfie Search – Neon Pro UI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --accent-from:#6d28d9; /* purple-700 */
+      --accent-to:#06b6d4;   /* cyan-500 */
+      --ring: 0 0% 0%;
+    }
+    html,body{ font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, 'Helvetica Neue', Arial, 'Apple Color Emoji','Segoe UI Emoji'; }
+    .glass{ backdrop-filter: blur(10px); background-color: rgba(255,255,255,.6); }
+    .dark .glass{ background-color: rgba(17,17,17,.6); }
+    .card{ @apply rounded-2xl border border-white/10 bg-white/70 dark:bg-white/5 shadow-[0_10px_30px_-12px_rgba(0,0,0,.35)]; }
+    .btn{ @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium shadow-sm transition active:scale-[.98]; }
+    .btn-primary{ background: linear-gradient(90deg,var(--accent-from),var(--accent-to)); color:white; }
+    .btn-ghost{ @apply bg-white/60 dark:bg-white/10 backdrop-blur border border-white/20 hover:bg-white/80 dark:hover:bg-white/20; }
+    .chip{ @apply inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/60 dark:bg-white/10 px-3 py-1 text-sm; }
+    .input{ @apply w-full rounded-xl border border-white/20 bg-white/70 dark:bg-white/10 px-3 py-2 outline-none focus:ring-2 focus:ring-purple-300/50 dark:focus:ring-cyan-400/40; }
+    .label{ @apply text-sm text-gray-700 dark:text-gray-300 font-medium; }
+    .kbd{ @apply inline-flex items-center rounded-md border border-gray-300/50 bg-gray-50 px-1.5 py-0.5 text-[11px] font-mono text-gray-700; }
+    .neon-text{ background: linear-gradient(90deg,var(--accent-from),var(--accent-to)); -webkit-background-clip: text; background-clip:text; color:transparent; }
+    .neon-ring{ box-shadow: 0 0 0 2px rgba(255,255,255,.25), 0 8px 30px -8px rgba(79,70,229,.5); }
+    .skeleton{ background: linear-gradient(90deg, rgba(255,255,255,.35) 25%, rgba(255,255,255,.15) 37%, rgba(255,255,255,.35) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+    @keyframes shimmer{ 0%{background-position: 100% 0} 100%{background-position: 0 0} }
+    .grid-auto-fill{ display:grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
+  </style>
+</head>
+<body class="h-full bg-gradient-to-b from-white to-purple-50 dark:from-neutral-900 dark:to-neutral-950 text-neutral-900 dark:text-neutral-100">
+  <!-- Topbar -->
+  <header class="sticky top-0 z-40 border-b border-white/20 glass">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 grid place-content-center rounded-xl bg-gradient-to-br from-[var(--accent-from)] to-[var(--accent-to)] text-white font-bold">SS</div>
+        <div>
+          <h1 class="text-lg font-bold"><span class="neon-text">Selfie Search</span> <span class="text-sm font-medium text-neutral-500 dark:text-neutral-400 align-middle">Pro</span></h1>
+          <p id="statusLine" class="text-xs text-neutral-500 dark:text-neutral-400">तैयार…</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="hidden sm:flex items-center gap-1 rounded-xl border border-white/20 glass px-2 py-1">
+          <span class="text-xs text-neutral-600 dark:text-neutral-300">थीम</span>
+          <button id="themeLight" class="btn btn-ghost !px-2 text-xs">Light</button>
+          <button id="themeDark" class="btn btn-ghost !px-2 text-xs">Dark</button>
+        </div>
+        <div class="hidden sm:flex items-center gap-1 rounded-xl border border-white/20 glass px-2 py-1">
+          <span class="text-xs text-neutral-600 dark:text-neutral-300">एक्सेंट</span>
+          <button data-accent="purple-cyan" class="btn btn-ghost !px-2 text-xs">Purple↔Cyan</button>
+          <button data-accent="rose-amber" class="btn btn-ghost !px-2 text-xs">Rose↔Amber</button>
+          <button data-accent="emerald-sky" class="btn btn-ghost !px-2 text-xs">Emerald↔Sky</button>
+        </div>
+        <a id="btnDownloadAll" class="btn btn-primary" href="#" download>डाउनलोड</a>
+      </div>
+    </div>
+    <div id="progressBar" class="h-0.5 bg-gradient-to-r from-[var(--accent-from)] to-[var(--accent-to)] scale-x-0 origin-left transition-transform"></div>
+  </header>
+
+  <!-- Main -->
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 grid gap-6 lg:grid-cols-12">
+    <!-- Left: Inputs -->
+    <section class="lg:col-span-4 space-y-4">
+      <div class="card p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-base font-semibold">इनपुट</h2>
+          <div class="inline-flex rounded-xl border border-white/20 glass overflow-hidden">
+            <button id="tabCamera" class="px-3 py-1 text-sm font-medium bg-white/70 dark:bg-white/10">कैमरा</button>
+            <button id="tabUpload" class="px-3 py-1 text-sm font-medium">अपलोड</button>
+            <button id="tabHistory" class="px-3 py-1 text-sm font-medium">हिस्ट्री</button>
+          </div>
+        </div>
+
+        <!-- Camera Panel -->
+        <div id="panelCamera" class="grid gap-3">
+          <div class="relative aspect-video rounded-xl overflow-hidden border border-white/20 bg-black/60">
+            <video id="video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+            <canvas id="canvas" class="hidden"></canvas>
+            <div id="camOverlay" class="absolute inset-0 grid place-content-center text-center p-6 text-white">
+              <div class="space-y-2">
+                <p class="text-sm text-white/80">कैमरा चालू करें और <span class="kbd">C</span> दबाएँ</p>
+                <div class="flex justify-center gap-2">
+                  <button id="btnStartCam" class="btn btn-ghost">कैमरा चालू</button>
+                  <button id="btnSnap" class="btn btn-primary" disabled>कैप्चर</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Panel -->
+        <div id="panelUpload" class="grid gap-3 hidden">
+          <label class="relative rounded-2xl border-2 border-dashed border-white/30 bg-gradient-to-br from-white/70 to-white/40 dark:from-white/10 dark:to-white/5 p-6 text-center cursor-pointer hover:border-white/60 transition" id="dropZone">
+            <input id="fileInput" type="file" accept="image/*" class="hidden" />
+            <div class="space-y-1">
+              <div class="mx-auto h-12 w-12 rounded-xl bg-gradient-to-br from-[var(--accent-from)] to-[var(--accent-to)] opacity-90"></div>
+              <p class="text-sm">इमेज खींचें और छोड़ें / क्लिक करें</p>
+              <p class="text-xs text-neutral-500">JPEG/PNG, 10MB तक</p>
+            </div>
+          </label>
+          <div id="uploadPreview" class="hidden">
+            <img id="uploadPreviewImg" class="w-full rounded-2xl border border-white/20" alt="preview"/>
+          </div>
+        </div>
+
+        <!-- History Panel (simple placeholder, populated from localStorage) -->
+        <div id="panelHistory" class="hidden">
+          <div id="historyList" class="grid-auto-fill"></div>
+        </div>
+
+        <!-- FX controls -->
+        <div class="grid gap-3">
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="label">Brightness</label>
+              <input id="fxBrightness" type="range" min="0.5" max="1.5" step="0.01" value="1" class="w-full">
+            </div>
+            <div>
+              <label class="label">Contrast</label>
+              <input id="fxContrast" type="range" min="0.5" max="1.5" step="0.01" value="1" class="w-full">
+            </div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="label">Saturation</label>
+              <input id="fxSaturate" type="range" min="0" max="2" step="0.01" value="1" class="w-full">
+            </div>
+            <div class="flex items-end gap-2">
+              <input id="fxMirror" type="checkbox" class="h-4 w-4"> <label for="fxMirror" class="label">Mirror</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mt-2">
+          <button id="btnClear" class="btn btn-ghost">क्लीयर</button>
+          <button id="btnSearch" class="btn btn-primary">सर्च करें</button>
+        </div>
+      </div>
+
+      <div class="card p-4">
+        <h3 class="text-base font-semibold mb-3">एडवांस सेटिंग्स</h3>
+        <div class="grid gap-3">
+          <div>
+            <label class="label">API Base</label>
+            <input id="inpBase" class="input" placeholder="https://.../search" />
+            <p class="text-xs text-neutral-500 mt-1">(कंफिग, API, फील्ड नाम – सब पहले जैसा)</p>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="label">Link ID (वैकल्पिक)</label>
+              <input id="inpLink" class="input" placeholder="abcd1234" />
+            </div>
+            <div>
+              <label class="label">Allowed Folders (comma)</label>
+              <input id="inpFolders" class="input" placeholder="folderA,folderB" />
+            </div>
+          </div>
+          <div class="grid sm:grid-cols-3 gap-3">
+            <div>
+              <label class="label">Threshold</label>
+              <input id="inpThreshold" type="range" min="0" max="1" step="0.01" class="w-full" />
+              <div class="text-xs text-neutral-600 mt-1"><span id="lblThreshold">0.50</span></div>
+            </div>
+            <div>
+              <label class="label">Max Results</label>
+              <input id="inpMax" type="number" min="1" max="200" class="input" />
+            </div>
+            <div>
+              <label class="label">Page Size</label>
+              <input id="inpPageSize" type="number" min="6" max="60" class="input" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Results -->
+    <section class="lg:col-span-8 space-y-4">
+      <div class="card p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-base font-semibold">रिज़ल्ट्स</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="chip"><input id="chkSelectMode" type="checkbox" class="mr-2"/>सेलेक्ट</div>
+            <span id="resultCount" class="chip">0 results</span>
+            <select id="sortBy" class="input !py-1 !px-2 w-auto text-sm"><option value="score-desc">Score ⬇</option><option value="score-asc">Score ⬆</option><option value="name-asc">Name A→Z</option><option value="name-desc">Name Z→A</option></select>
+          </div>
+        </div>
+
+        <!-- Facets -->
+        <div id="facets" class="mt-3 hidden">
+          <div class="text-xs text-neutral-500 mb-1">फोल्डर फिल्टर</div>
+          <div id="facetFolders" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <div id="resultsGrid" class="mt-4 grid-auto-fill min-h-[160px]"></div>
+        <div id="pagination" class="mt-3 flex items-center justify-between gap-2 hidden">
+          <button id="btnPrev" class="btn btn-ghost">पिछला</button>
+          <div class="text-sm text-neutral-600 dark:text-neutral-300">पेज <span id="pageNow">1</span></div>
+          <button id="btnNext" class="btn btn-ghost">अगला</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Lightbox with filmstrip -->
+  <div id="lightbox" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative h-full w-full grid grid-rows-[1fr_auto]">
+      <button id="lbClose" class="absolute top-4 right-4 btn btn-ghost text-white border-white/20">बंद</button>
+      <div class="h-full w-full grid place-content-center p-4">
+        <img id="lbImg" alt="preview" class="max-h-[80vh] max-w-[90vw] rounded-2xl neon-ring"/>
+        <div class="mt-3 text-center text-white/90 text-sm" id="lbMeta"></div>
+        <div class="mt-2 text-center">
+          <a id="lbOpen" href="#" target="_blank" class="underline text-white/80 text-xs">ओरिजिनल खोलें</a>
+          <button id="lbCopy" class="ml-3 underline text-white/80 text-xs">कॉपी लिंक</button>
+        </div>
+      </div>
+      <div id="filmstrip" class="relative overflow-x-auto whitespace-nowrap p-3 bg-black/30">
+        <div id="filmwrap" class="inline-flex gap-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating bulk toolbar -->
+  <div id="bulkBar" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-2xl glass border border-white/20 px-3 py-2 text-sm shadow-lg">
+    <span id="bulkCount">0</span> चुने गए ·
+    <button id="bulkDownload" class="ml-2 underline">डाउनलोड</button>
+    <button id="bulkClear" class="ml-2 underline">क्लीयर</button>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="rounded-xl bg-black text-white px-4 py-2 text-sm shadow-lg" id="toastMsg">Message</div>
+  </div>
+
+  <script>
+  // -----------------------------
+  // Configuration (UNCHANGED)
+  // -----------------------------
+  const API = {
+    BASE: 'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search',
+    LINK_ID: 'a8c6b1156f14',
+    ALLOWED_FOLDERS: ['MPevent'],
+    THRESHOLD: 0.5,
+    MAX: 50,
+    PAGE_SIZE: 12,
+  };
+
+  // State
+  let state = {
+    imageDataUrl: null,
+    page: 1,
+    total: 0,
+    items: [],
+    selecting: false,
+    selected: new Set(),
+    filters: { folder: null },
+    history: [],
+  };
+
+  // Utils
+  const $ = (id) => document.getElementById(id);
+  const status = (msg) => $('statusLine').textContent = msg;
+  const toast = (msg) => { const t=$('toast'), tm=$('toastMsg'); tm.textContent=msg; t.classList.remove('hidden'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.add('hidden'),1800); };
+  const progress = (on)=> $('progressBar').style.transform = on? 'scaleX(1)' : 'scaleX(0)';
+
+  // Theme & Accent
+  function setTheme(mode){ document.documentElement.classList.toggle('dark', mode==='dark'); localStorage.setItem('ss_theme', mode); }
+  function setAccent(name){
+    if(name==='rose-amber'){ document.documentElement.style.setProperty('--accent-from','#e11d48'); document.documentElement.style.setProperty('--accent-to','#f59e0b'); }
+    else if(name==='emerald-sky'){ document.documentElement.style.setProperty('--accent-from','#10b981'); document.documentElement.style.setProperty('--accent-to','#0ea5e9'); }
+    else { document.documentElement.style.setProperty('--accent-from','#6d28d9'); document.documentElement.style.setProperty('--accent-to','#06b6d4'); }
+    localStorage.setItem('ss_accent', name);
+  }
+
+  // Params & config sync
+  const parseParams = () => {
+    const u = new URL(window.location.href); const gp=(k)=>u.searchParams.get(k);
+    if(gp('base')) API.BASE = gp('base');
+    if(gp('link')) API.LINK_ID = gp('link');
+    if(gp('folder')) API.ALLOWED_FOLDERS = gp('folder').split(',').map(s=>s.trim()).filter(Boolean);
+    if(gp('threshold')) API.THRESHOLD = Math.max(0, Math.min(1, parseFloat(gp('threshold'))));
+    if(gp('max')) API.MAX = Math.max(1, parseInt(gp('max'))||API.MAX);
+    if(gp('pagesize')) API.PAGE_SIZE = Math.max(6, parseInt(gp('pagesize'))||API.PAGE_SIZE);
+  };
+  const syncUIFromConfig = () => {
+    $('inpBase').value = API.BASE || '';
+    $('inpLink').value = API.LINK_ID || '';
+    $('inpFolders').value = API.ALLOWED_FOLDERS.join(',');
+    $('inpThreshold').value = API.THRESHOLD; $('lblThreshold').textContent = API.THRESHOLD.toFixed(2);
+    $('inpMax').value = API.MAX; $('inpPageSize').value = API.PAGE_SIZE;
+  };
+  const syncConfigFromUI = () => {
+    API.BASE = $('inpBase').value.trim();
+    API.LINK_ID = $('inpLink').value.trim() || null;
+    API.ALLOWED_FOLDERS = $('inpFolders').value.split(',').map(s=>s.trim()).filter(Boolean);
+    API.THRESHOLD = parseFloat($('inpThreshold').value)||0.5; $('lblThreshold').textContent = API.THRESHOLD.toFixed(2);
+    API.MAX = Math.max(1, parseInt($('inpMax').value)||50);
+    API.PAGE_SIZE = Math.max(6, parseInt($('inpPageSize').value)||12);
+  };
+
+  // Input tabs
+  function activateTab(which){
+    ['panelCamera','panelUpload','panelHistory'].forEach(id=> $(id).classList.add('hidden'));
+    ['tabCamera','tabUpload','tabHistory'].forEach(id=> $(id).classList.remove('bg-white/70','dark:bg-white/10'));
+    if(which==='camera'){ $('panelCamera').classList.remove('hidden'); $('tabCamera').classList.add('bg-white/70','dark:bg-white/10'); }
+    if(which==='upload'){ $('panelUpload').classList.remove('hidden'); $('tabUpload').classList.add('bg-white/70','dark:bg-white/10'); }
+    if(which==='history'){ $('panelHistory').classList.remove('hidden'); $('tabHistory').classList.add('bg-white/70','dark:bg-white/10'); renderHistory(); }
+  }
+
+  // Camera
+  async function startCamera(){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      const video = $('video'); video.srcObject = stream; video.classList.remove('hidden'); $('camOverlay').classList.add('hidden'); $('btnSnap').disabled = false; status('कैमरा चालू');
+    }catch(err){ console.error(err); toast('कैमरा उपलब्ध नहीं (HTTPS/परमिशन चेक करें)'); }
+  }
+  function takeSnapshot(){
+    const video=$('video'); if(video.classList.contains('hidden')){ toast('पहले कैमरा चालू करें'); return; }
+    const c=$('canvas'); c.width=video.videoWidth; c.height=video.videoHeight; const ctx=c.getContext('2d');
+    applyCtxFilter(ctx); ctx.translate($('fxMirror').checked? c.width:0, 0); ctx.scale($('fxMirror').checked? -1:1,1);
+    ctx.drawImage(video,0,0,c.width,c.height);
+    const dataUrl=c.toDataURL('image/jpeg',0.9); state.imageDataUrl=dataUrl; showUploadPreview(dataUrl); saveHistoryThumb(dataUrl);
+    toast('कैप्चर हो गया');
+  }
+
+  // Upload
+  function showUploadPreview(url){ const p=$('uploadPreview'); const img=$('uploadPreviewImg'); img.src=url; p.classList.remove('hidden'); }
+  function handleFiles(files){ const file=files?.[0]; if(!file) return; if(file.size>10*1024*1024){ toast('फ़ाइल बहुत बड़ी है'); return; } const r=new FileReader(); r.onload=()=>{ state.imageDataUrl=r.result; showUploadPreview(r.result); saveHistoryThumb(r.result); }; r.readAsDataURL(file); }
+
+  // Apply filters to canvas ctx
+  function applyCtxFilter(ctx){ const b=$('fxBrightness').value||1, c=$('fxContrast').value||1, s=$('fxSaturate').value||1; ctx.filter=`brightness(${b}) contrast(${c}) saturate(${s})`; }
+
+  async function performSearch(page=1){
+    syncConfigFromUI(); if(!API.BASE){ toast('API Base आवश्यक है'); return; } if(!state.imageDataUrl){ toast('कृपया इमेज दें/कैप्चर करें'); return; }
+    // Re-render with filters into a temp canvas
+    const dataUrl = await applyFiltersToDataUrl(state.imageDataUrl);
+
+    $('btnSearch').disabled=true; $('btnSearch').textContent='खोज रहा…'; progress(true); status('रिक्वेस्ट भेज रहे हैं…');
+
+    const body={ image: dataUrl, linkId: API.LINK_ID||undefined, allowedFolders: API.ALLOWED_FOLDERS.length? API.ALLOWED_FOLDERS:undefined, threshold: API.THRESHOLD, max: API.MAX, page, pageSize: API.PAGE_SIZE };
+
+    try{
+      const res = await fetch(`${API.BASE}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderResults(data, page); status('रिज़ल्ट्स मिल गए');
+    }catch(err){ console.error(err); toast('एरर: '+err.message); $('resultsGrid').innerHTML = `<div class='text-sm text-rose-500'>फेच एरर: ${err.message}</div>`; }
+    finally{ $('btnSearch').disabled=false; $('btnSearch').textContent='सर्च करें'; progress(false); }
+  }
+
+  function normalizeItems(data){ const items = data?.items || data?.results || data || []; const total = data?.total || items.length; return { items, total }; }
+  function getItemPreviewUrl(item){ return item.thumbnail || item.preview || item.url || item.downloadUrl || item.signedUrl || item.src || null; }
+
+  function buildFacets(items){
+    const map=new Map(); items.forEach(it=>{ const f = it.folder || (it.path? String(it.path).split(/[\\\/]/)[0] : null); if(!f) return; map.set(f, (map.get(f)||0)+1); });
+    const wrap=$('facetFolders'); wrap.innerHTML=''; if(map.size===0){ $('facets').classList.add('hidden'); return; }
+    $('facets').classList.remove('hidden');
+    const allBtn = facetChip('All', null, state.filters.folder===null); wrap.appendChild(allBtn);
+    map.forEach((count,name)=>{ wrap.appendChild(facetChip(`${name} (${count})`, name, state.filters.folder===name)); });
+  }
+  function facetChip(label, value, active){ const b=document.createElement('button'); b.className='chip '+(active?'ring-1 ring-white/40':''); b.textContent=label; b.addEventListener('click',()=>{ state.filters.folder=value; renderResults({items:state.items,total:state.total}, state.page); }); return b; }
+
+  function sortItems(items){ const v=$('sortBy').value; const by=(k)=> (a,b)=> (String(a[k]||'')).localeCompare(String(b[k]||'')); const num=(k,dir)=> (a,b)=> (dir*(Number(a[k]??a.score??0)-Number(b[k]??b.score??0)));
+    if(v==='score-desc') return items.sort(num('score',-1));
+    if(v==='score-asc') return items.sort(num('score',+1));
+    if(v==='name-asc') return items.sort(by('name'));
+    if(v==='name-desc') return items.sort((a,b)=> -by('name')(a,b));
+    return items;
+  }
+
+  function renderResults(data, page){
+    const { items, total } = normalizeItems(data); state.items = items.slice(); state.total=total; state.page=page; $('resultCount').textContent = `${total} results`;
+
+    buildFacets(items);
+
+    let view = items.slice();
+    if(state.filters.folder){ view = view.filter(it => (it.folder||'').includes(state.filters.folder) || String(it.path||'').includes(state.filters.folder)); }
+    view = sortItems(view);
+
+    const grid=$('resultsGrid'); grid.innerHTML='';
+    if(!view.length){ grid.innerHTML = `<div class='text-sm text-neutral-500'>कोई रिज़ल्ट नहीं</div>`; hidePagination(); return; }
+
+    const frag=document.createDocumentFragment();
+
+    view.forEach((item, idx)=>{
+      const url=getItemPreviewUrl(item); const title=item.name||item.filename||item.id||`item-${idx+1}`; const score=(item.score??item.similarity??null);
+      const btn=document.createElement('button'); btn.type='button'; btn.className='group relative rounded-2xl border border-white/20 overflow-hidden bg-gradient-to-br from-white/70 to-white/40 dark:from-white/10 dark:to-white/5 hover:shadow-xl transition';
+      btn.innerHTML = `
+        <div class="aspect-square bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+          ${ url ? `<img data-url="${url}" alt="${title}" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy"/>` : `<div class='h-full w-full grid place-content-center text-neutral-400 text-sm'>कोई प्रीव्यू नहीं</div>` }
+        </div>
+        <div class="p-2 flex items-center justify-between gap-2">
+          <div class="truncate text-sm">
+            <div class="font-medium truncate">${title}</div>
+            ${ score!=null ? `<div class="text-xs text-neutral-500">score: ${Number(score).toFixed(3)}</div>` : ''}
+          </div>
+          <input type="checkbox" class="h-4 w-4 rounded border-white/30 bg-white/60 dark:bg-white/10 selectBox ${state.selecting? '' : 'hidden'}" data-idx="${idx}" />
+        </div>
+        <div class="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[11px] text-white" style="background: linear-gradient(90deg,var(--accent-from),var(--accent-to));">${item.folder||'file'}</div>
+      `;
+      btn.addEventListener('click',(e)=>{ if(e.target && e.target.matches('input[type="checkbox"]')) return; openLightbox(url||'', title, idx); });
+      frag.appendChild(btn);
+    });
+    grid.appendChild(frag);
+    showPagination();
+    updateBulkBar();
+
+    // filmstrip data for lightbox
+    buildFilmstrip(view);
+  }
+
+  function buildFilmstrip(list){ const wrap=$('filmwrap'); wrap.innerHTML=''; list.slice(0,50).forEach((it,i)=>{ const u=getItemPreviewUrl(it); if(!u) return; const b=document.createElement('button'); b.className='h-16 w-16 overflow-hidden rounded-lg border border-white/20'; b.innerHTML=`<img src="${u}" class="h-full w-full object-cover"/>`; b.addEventListener('click',()=>{ $('lbImg').src=u; $('lbMeta').textContent=it.name||it.filename||''; $('lbOpen').href=u; }); wrap.appendChild(b); }); }
+
+  function showPagination(){ $('pagination').classList.remove('hidden'); $('pageNow').textContent=String(state.page); }
+  function hidePagination(){ $('pagination').classList.add('hidden'); }
+
+  function openLightbox(url, title, idx){ if(!url){ toast('प्रीव्यू नहीं'); return; } $('lbImg').src=url; $('lbMeta').textContent=title||''; $('lbOpen').href=url; $('lightbox').classList.remove('hidden'); document.addEventListener('keydown',onLbKeys); $('lightbox')._idx = idx; }
+  function closeLightbox(){ const lb=$('lightbox'); lb.classList.add('hidden'); document.removeEventListener('keydown',onLbKeys); }
+  function onLbKeys(e){ if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowRight') navigateLightbox(1); if(e.key==='ArrowLeft') navigateLightbox(-1); }
+  function navigateLightbox(step){ const items=state.items; if(!items?.length) return; let i=( $('lightbox')._idx ?? 0)+step; if(i<0) i=items.length-1; if(i>=items.length) i=0; $('lightbox')._idx=i; const it=items[i]; const url=getItemPreviewUrl(it); if(url){ $('lbImg').src=url; $('lbMeta').textContent=it.name||it.filename||`item-${i+1}`; $('lbOpen').href=url; } }
+
+  async function downloadSelected(){ const idxs=Array.from(state.selected); if(idxs.length===0){ toast('कोई सेलेक्शन नहीं'); return; } let c=0; for(const idx of idxs){ const it=state.items[idx]; const url=getItemPreviewUrl(it)||it.downloadUrl||it.url; if(!url) continue; const a=document.createElement('a'); a.href=url; a.download=(it.filename||it.name||`item-${idx+1}`); a.target='_blank'; a.click(); c++; } toast(`${c} डाउनलोड ट्रिगर हुए`); }
+  function updateBulkBar(){ const n=state.selected.size; $('bulkBar').classList.toggle('hidden', n===0); $('bulkCount').textContent=String(n); }
+
+  // History (thumbnails only)
+  function saveHistoryThumb(dataUrl){ try{ const arr=JSON.parse(localStorage.getItem('ss_history')||'[]'); arr.unshift({ t:Date.now(), src:dataUrl }); localStorage.setItem('ss_history', JSON.stringify(arr.slice(0,30))); state.history=arr; }catch{} }
+  function renderHistory(){ const box=$('historyList'); box.innerHTML=''; const arr=JSON.parse(localStorage.getItem('ss_history')||'[]'); state.history=arr; if(!arr.length){ box.innerHTML='<div class="text-sm text-neutral-500">खाली</div>'; return; } arr.forEach(h=>{ const d=document.createElement('div'); d.className='rounded-xl overflow-hidden border border-white/20'; d.innerHTML=`<img src="${h.src}" class="w-full h-28 object-cover"/>`; box.appendChild(d); }); }
+
+  // Build filtered DataURL using canvas & ctx.filter
+  async function applyFiltersToDataUrl(src){ return new Promise((resolve)=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=img.width; c.height=img.height; const ctx=c.getContext('2d'); applyCtxFilter(ctx); ctx.translate($('fxMirror').checked? c.width:0,0); ctx.scale($('fxMirror').checked? -1:1,1); ctx.drawImage(img,0,0); resolve(c.toDataURL('image/jpeg',0.9)); }; img.src=src; }); }
+
+  // Events
+  $('tabCamera').addEventListener('click',()=>activateTab('camera'));
+  $('tabUpload').addEventListener('click',()=>activateTab('upload'));
+  $('tabHistory').addEventListener('click',()=>activateTab('history'));
+
+  $('btnStartCam').addEventListener('click', startCamera);
+  $('btnSnap').addEventListener('click', takeSnapshot);
+  $('btnClear').addEventListener('click', ()=>{ state.imageDataUrl=null; $('uploadPreview').classList.add('hidden'); $('dropZone').innerHTML = `<input id="fileInput" type="file" accept="image/*" class="hidden" /><div class='space-y-1'><div class='mx-auto h-12 w-12 rounded-xl bg-gradient-to-br from-[var(--accent-from)] to-[var(--accent-to)] opacity-90'></div><p class='text-sm'>इमेज खींचें और छोड़ें / क्लिक करें</p><p class='text-xs text-neutral-500'>JPEG/PNG, 10MB तक</p></div>`; bindFileInput(); });
+  $('btnSearch').addEventListener('click', ()=> performSearch(1));
+  $('btnPrev').addEventListener('click', ()=>{ if(state.page>1) performSearch(state.page-1); });
+  $('btnNext').addEventListener('click', ()=> performSearch(state.page+1));
+  $('btnDownloadAll').addEventListener('click', (e)=>{ e.preventDefault(); downloadSelected(); });
+  $('bulkDownload').addEventListener('click', downloadSelected);
+  $('bulkClear').addEventListener('click', ()=>{ state.selected.clear(); updateBulkBar(); document.querySelectorAll('.selectBox').forEach(cb=> cb.checked=false); });
+
+  $('inpThreshold').addEventListener('input', ()=> $('lblThreshold').textContent = parseFloat($('inpThreshold').value).toFixed(2));
+  $('chkSelectMode').addEventListener('change', (e)=>{ state.selecting=e.target.checked; state.selected.clear(); updateBulkBar(); document.querySelectorAll('.selectBox').forEach(cb=> cb.classList.toggle('hidden', !state.selecting)); });
+  $('sortBy').addEventListener('change', ()=> renderResults({items:state.items,total:state.total}, state.page));
+
+  function bindDnD(){ const dz=$('dropZone'); dz.addEventListener('click', ()=> $('fileInput').click()); dz.addEventListener('dragover',(e)=>{ e.preventDefault(); dz.classList.add('ring-2'); }); dz.addEventListener('dragleave',()=> dz.classList.remove('ring-2')); dz.addEventListener('drop',(e)=>{ e.preventDefault(); dz.classList.remove('ring-2'); handleFiles(e.dataTransfer.files); }); }
+  function bindFileInput(){ const fi=$('fileInput'); fi.addEventListener('change',(e)=> handleFiles(e.target.files)); }
+
+  // Lightbox controls
+  $('lbClose').addEventListener('click', closeLightbox);
+  $('lbCopy').addEventListener('click', ()=>{ const url=$('lbOpen').href; navigator.clipboard.writeText(url).then(()=>toast('लिंक कॉपी')); });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown',(e)=>{ if(e.key==='/' && !(e.ctrlKey||e.metaKey)){ e.preventDefault(); $('fileInput').click(); } if(e.key.toLowerCase()==='c'){ takeSnapshot(); } });
+
+  // Theme buttons
+  $('themeLight').addEventListener('click', ()=> setTheme('light'));
+  $('themeDark').addEventListener('click', ()=> setTheme('dark'));
+  document.querySelectorAll('[data-accent]').forEach(b=> b.addEventListener('click', ()=> setAccent(b.dataset.accent)));
+
+  // Boot
+  function boot(){
+    // theme init
+    const t = localStorage.getItem('ss_theme')||'light'; setTheme(t);
+    const a = localStorage.getItem('ss_accent')||'purple-cyan'; setAccent(a);
+
+    parseParams(); syncUIFromConfig(); bindDnD(); bindFileInput();
+    status('तैयार'); activateTab('camera');
+  }
+  boot();
+  </script>
+</body>
+</html>
