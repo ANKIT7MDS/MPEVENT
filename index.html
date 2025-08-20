@@ -4,6 +4,11 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Selfie Search • लोकसभा सांसद श्री सुधीर जी गुप्ता</title>
+
+<!-- ZIP के लिए लाइब्रेरीज़ -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
 <style>
   :root{
     --bg1:#ff8a00; --bg2:#ff5e00; --line:#e5e7eb; --ink:#0b1220;
@@ -19,13 +24,13 @@
   .btn.ghost{background:#fff0;border:1px solid #ffffff66;color:#fff}
   input[type="file"]{display:block}
   .muted{color:var(--ink-muted)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
-  .thumb{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px}
+  .thumb{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fff}
   .thumb img{width:100%;height:130px;object-fit:cover;display:block}
   .pick{position:absolute;left:6px;top:6px;transform:scale(1.2);background:#fff8;padding:4px;border-radius:6px}
   .hero{
     position:relative;border-radius:16px;overflow:hidden;margin:14px 14px 0;height:210px;
-    background:#000 url('hero.jpg') center/cover no-repeat;
+    background:#000 url('hero.jpg') center/cover no-repeat; /* यहाँ hero.jpg उसी फोल्डर में रखें */
   }
   .hero::after{
     content:""; position:absolute; inset:0; background:linear-gradient(90deg,#00000088,#00000033 50%,#0000);
@@ -48,6 +53,7 @@
   video,canvas.preview{width:260px;max-width:100%;border-radius:10px;border:1px solid var(--line)}
   .form-row{display:flex;gap:10px;flex-wrap:wrap}
   .input{padding:10px;border:1px solid var(--line);border-radius:12px}
+  #resultsSection{scroll-margin-top:12px}
 </style>
 </head>
 <body>
@@ -57,7 +63,7 @@
   <h1>लोकसभा सांसद श्री सुधीर जी गुप्ता के साथ आपकी तस्वीर — अपनी सेल्फी स्कैन कर यहाँ से प्राप्त करें</h1>
 </div>
 
-<div class="wrap">
+<div class="wrap" id="top">
   <div class="toolbar" style="color:#fff">
     <span class="pill">API: <b id="apiState">—</b></span>
     <span class="pill">Folder: <b>sudhirji</b></span>
@@ -88,10 +94,16 @@
           <div class="row" style="gap:6px;margin-bottom:6px">
             <button id="openCam" class="btn outline">📷 कैमरा ऑन</button>
             <button id="snap" class="btn outline" disabled>कैप्चर</button>
+            <button id="retake" class="btn outline" style="display:none">Retake</button>
           </div>
-          <video id="video" playsinline muted></video>
+          <video id="video" playsinline muted style="display:none"></video>
           <canvas id="shot" class="preview" style="display:none"></canvas>
         </div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <label class="row" style="gap:6px"><input id="recall" type="checkbox" checked>High Recall</label>
+        <label class="row" style="gap:6px"><input id="autoFocus" type="checkbox" checked>Auto focus to results</label>
       </div>
 
       <div class="row" style="margin-top:10px">
@@ -104,10 +116,12 @@
     </section>
 
     <!-- RIGHT: Results -->
-    <section class="card" style="flex:1 1 520px">
+    <section id="resultsSection" class="card" style="flex:1 1 520px">
       <div class="toolbar">
         <div class="row" style="gap:8px">
-          <button id="downloadSel" class="btn outline">डाउनलोड चयनित</button>
+          <button id="selectAll" class="btn outline">Select All</button>
+          <button id="clearSel" class="btn outline">Clear</button>
+          <button id="downloadZip" class="btn outline">Download ZIP</button>
           <span class="muted">चयनित: <b id="selCount">0</b></span>
         </div>
         <div class="row">
@@ -133,7 +147,6 @@
 
 <script>
 (function(){
-  // ---------- Elements ----------
   const $ = id => document.getElementById(id);
   const api = $('base').value;
   const folder = $('folder').value;
@@ -144,39 +157,41 @@
   const hint = $('hint');
   const MAX_RESULTS = Number($('MAX').value) || 200;
 
-  // lightbox state
-  let allResults = [];       // full list (capped at MAX_RESULTS)
+  let allResults = [];  // capped list
   let page = 1, pageSize = 30;
   let selected = new Set();  // keys
-  let slideIndex = -1;       // index inside current page
+  let slideIndex = -1;
 
-  // ---------- API health ----------
+  // API health
   (async () => {
     try { const r=await fetch(api.replace(/\/search$/,'/health')); await r.json(); $('apiState').textContent='OK'; }
     catch { $('apiState').textContent='Error'; }
   })();
 
-  // ---------- Camera ----------
-  const video = $('video'), shot = $('shot');
-  let stream = null;
-  $('openCam').onclick = async () => {
+  // Camera
+  const video=$('video'), shot=$('shot'); let stream=null;
+  $('openCam').onclick = async ()=>{
     try{
       stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
       video.srcObject = stream; await video.play();
-      $('snap').disabled = false;
-    }catch(e){
-      alert('कैमरा अनुमति नहीं मिली: ' + e.message);
-    }
+      video.style.display='block';
+      shot.style.display='none';
+      $('snap').disabled=false; $('retake').style.display='none';
+    }catch(e){ alert('कैमरा अनुमति नहीं मिली: '+e.message); }
   };
-  $('snap').onclick = async () => {
+  $('snap').onclick = ()=>{
     if(!video.videoWidth){ alert('कैमरा तैयार नहीं है'); return; }
-    shot.width = video.videoWidth; shot.height = video.videoHeight;
+    shot.width=video.videoWidth; shot.height=video.videoHeight;
     shot.getContext('2d').drawImage(video,0,0);
-    shot.style.display='block';
+    shot.style.display='block'; video.style.display='none';
+    $('retake').style.display='inline-block';
     previewImage(shot.toDataURL('image/jpeg',0.98));
+    // कैमरा रोक दें (एक ही प्रीव्यू)
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
   };
+  $('retake').onclick = ()=>{ $('openCam').click(); };
 
-  // ---------- File handling ----------
+  // File
   $('file').addEventListener('change', async e=>{
     if(e.target.files[0]){
       const data = await fileToDataURL(e.target.files[0]);
@@ -184,13 +199,37 @@
     }
   });
   function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
-
   function previewImage(dataURL){
     $('previewWrap').innerHTML = '<img src="'+dataURL+'" style="max-width:260px;border:1px solid #e5e7eb;border-radius:10px"/>';
     $('previewWrap').dataset.img = dataURL;
   }
 
-  // ---------- Search ----------
+  // Helpers
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  function loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.crossOrigin='anonymous'; i.src=src; }); }
+  async function dataURLToCanvas(data){ const img=await loadImage(data); const c=document.createElement('canvas'); c.width=img.width; c.height=img.height; c.getContext('2d').drawImage(img,0,0); return c; }
+  function cropFromCanvas(c,rect){ const t=document.createElement('canvas'); t.width=rect.w; t.height=rect.h; t.getContext('2d').drawImage(c,rect.x,rect.y,rect.w,rect.h,0,0,rect.w,rect.h); return t.toDataURL('image/jpeg',0.98); }
+  function smartCrops(W,H){
+    const arr=[]; [0.90,0.75,0.60].forEach(f=>{ const s=Math.round(Math.min(W,H)*f); arr.push({x:Math.round((W-s)/2),y:Math.round((H-s)/2),w:s,h:s}); });
+    const pw=Math.round(W*0.65), ph=Math.round(H*0.70), xs=[0,Math.round((W-pw)/2),W-pw], ys=[Math.round(H*0.05),Math.round(H*0.18)];
+    xs.forEach(x=>ys.forEach(y=>arr.push({x,y,w:pw,h:ph})));
+    return arr;
+  }
+  function gridCrops(W,H){ const arr=[], nx=3, ny=3, ox=Math.round(W*0.10), oy=Math.round(H*0.10); const cw=Math.round((W+ox)/nx), ch=Math.round((H+oy)/ny);
+    for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){ const x=i*cw-Math.round(ox/2), y=j*ch-Math.round(oy/2); const r={x:Math.max(0,x),y:Math.max(0,y),w:Math.min(cw,W-x),h:Math.min(ch,H-y)}; r.w=Math.max(40,r.w); r.h=Math.max(40,r.h); arr.push(r); }
+    return arr;
+  }
+  function keyFromUrl(u){ try{ const url=new URL(u); return url.searchParams.get('Key') || url.pathname.replace(/^\/+/,''); } catch{ return u; } }
+  function dedupSort(list){ const map=new Map(); for(const it of list){ const k=it.key||keyFromUrl(it.downloadUrl); if(!map.has(k)||Number(it.similarity||0)>Number(map.get(k).similarity||0)) map.set(k,it); } return Array.from(map.values()).sort((a,b)=>Number(b.similarity||0)-Number(a.similarity||0)); }
+
+  async function callSearch(data, maxN, thr){
+    const payload={ image:data, imageBase64:data, threshold:thr, maxResults:maxN, allowedFolders:[folder] };
+    const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||r.statusText);
+    return j.results||[];
+  }
+
+  // Search
   $('search').onclick = async ()=>{
     const img = $('previewWrap').dataset.img;
     if(!img){ alert('कृपया कैमरा से कैप्चर करें या फोटो चुनें'); return; }
@@ -199,21 +238,39 @@
     grid.innerHTML=''; selected.clear(); updateSelected();
 
     try{
-      const payload = {
-        image: img, imageBase64: img,
-        threshold: 35,                // fixed (यूज़र से नहीं दिखाते)
-        maxResults: MAX_RESULTS,
-        allowedFolders: [folder]      // सिर्फ इसी फ़ोल्डर में
-      };
-      const r = await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      const j = await r.json();
-      if(!r.ok) throw new Error(j.error || r.statusText);
+      const maxN = MAX_RESULTS;
+      const high = $('recall').checked;
+      const thr = high ? 33 : 38; // प्रतिशत (33% ज्यादा recall)
+      const passes = [img];
 
-      // cap + render
-      allResults = (j.results || []).slice(0, MAX_RESULTS);
-      page = 1; renderPage();
+      if(high){
+        const c=await dataURLToCanvas(img); const W=c.width,H=c.height;
+        smartCrops(W,H).forEach(rc=>passes.push(cropFromCanvas(c,rc)));
+        gridCrops(W,H).forEach(rc=>passes.push(cropFromCanvas(c,rc)));
+      }
+
+      hint.textContent = `Passes: ${passes.length}  •  Max: ${maxN}`;
+
+      let hits=[];
+      // 3 की concurrency
+      let i=0, active=0; await new Promise(resolve=>{
+        const next=()=>{
+          if(i===passes.length && active===0) return resolve();
+          while(active<3 && i<passes.length){
+            const cur=passes[i++]; active++;
+            callSearch(cur,maxN,thr).then(r=>{ hits.push(...r); }).catch(()=>{}).finally(()=>{ active--; statusEl.textContent=`Pass ${i}/${passes.length} — raw hits: ${hits.length}`; next(); });
+          }
+        }; next();
+      });
+
+      const final = dedupSort(hits).slice(0, maxN);
+      allResults = final; page=1; renderPage();
+
+      if($('autoFocus').checked){
+        $('resultsSection').scrollIntoView({behavior:'smooth', block: 'start'});
+      }
     }catch(e){
-      statusEl.textContent = 'त्रुटि: ' + e.message;
+      statusEl.textContent='त्रुटि: '+e.message;
     }
   };
 
@@ -221,12 +278,12 @@
     $('file').value='';
     $('previewWrap').innerHTML='';
     delete $('previewWrap').dataset.img;
-    grid.innerHTML=''; allResults=[]; page=1; renderPage();
+    grid.innerHTML=''; allResults=[]; page=1; renderPage(); hint.textContent='';
   };
 
-  // ---------- Render ----------
+  // Render
   function renderPage(){
-    const total = allResults.length;
+    const total=allResults.length;
     pAll.textContent = Math.max(1, Math.ceil(total/pageSize));
     page = Math.min(Math.max(1,page), Number(pAll.textContent));
     pNow.textContent = page;
@@ -234,84 +291,92 @@
     $('prevPage').disabled = (page<=1);
     $('nextPage').disabled = (page>=Number(pAll.textContent));
 
-    const start=(page-1)*pageSize, end=Math.min(start+pageSize, total);
-    const items = allResults.slice(start,end);
+    const start=(page-1)*pageSize, end=Math.min(start+pageSize,total);
+    const items=allResults.slice(start,end);
 
     statusEl.textContent = total? `कुल ${total} परिणाम (पेज ${page}/${pAll.textContent})` : 'कोई रिज़ल्ट नहीं';
     grid.innerHTML='';
 
     items.forEach((it,idx)=>{
-      const k = it.key || (new URL(it.downloadUrl)).searchParams.get('Key') || it.downloadUrl;
-      const box = document.createElement('div'); box.className='thumb';
+      const k = it.key || keyFromUrl(it.downloadUrl);
+      const box=document.createElement('div'); box.className='thumb';
 
-      // select checkbox
-      const pick = document.createElement('input');
-      pick.type='checkbox'; pick.className='pick';
-      pick.checked = selected.has(k);
-      pick.onchange = ()=>{ if(pick.checked) selected.add(k); else selected.delete(k); updateSelected(); };
+      const pick=document.createElement('input'); pick.type='checkbox'; pick.className='pick'; pick.checked=selected.has(k);
+      pick.onchange=()=>{ if(pick.checked) selected.add(k); else selected.delete(k); updateSelected(); };
       box.appendChild(pick);
 
-      // image
-      const img = document.createElement('img'); img.src = it.downloadUrl; img.alt='';
-      img.onclick = ()=> openLightbox(start+idx);   // absolute index for slider
-      img.onerror = ()=>{ img.remove(); };
+      const img=document.createElement('img'); img.src=it.downloadUrl; img.alt='';
+      img.onclick=()=> openLightbox(start+idx);
+      img.onerror=()=>{ img.remove(); };
       box.appendChild(img);
 
       grid.appendChild(box);
     });
   }
+  $('prevPage').onclick=()=>{ page--; renderPage(); };
+  $('nextPage').onclick=()=>{ page++; renderPage(); };
 
-  function updateSelected(){ selCount.textContent = selected.size; }
-
-  // pagination buttons
-  $('prevPage').onclick = ()=>{ page--; renderPage(); };
-  $('nextPage').onclick = ()=>{ page++; renderPage(); };
-
-  // ---------- Bulk download ----------
-  $('downloadSel').onclick = async ()=>{
-    if(selected.size===0){ alert('कोई फोटो चुनी नहीं गई'); return; }
-    const current = visibleItems(); // urls only for current page selection
-    const urls = current.filter(it=>selected.has(it.k)).map(it=>it.url);
-    if(!urls.length){ alert('चयनित फोटो इस पेज पर नहीं हैं'); return; }
-    hint.textContent = 'डाउनलोड शुरू…';
-    for(const u of urls){
-      await delay(250);
-      const a=document.createElement('a'); a.href=u; a.download=''; document.body.appendChild(a); a.click(); a.remove();
-    }
-    hint.textContent = 'डाउनलोड पूर्ण';
+  // Select helpers
+  function updateSelected(){ selCount.textContent=selected.size; }
+  $('selectAll').onclick=()=>{
+    const start=(page-1)*pageSize, end=Math.min(start+pageSize,allResults.length);
+    allResults.slice(start,end).forEach(r=>selected.add(r.key||keyFromUrl(r.downloadUrl)));
+    updateSelected(); renderPage();
   };
-  function visibleItems(){
-    const start=(page-1)*pageSize, end=Math.min(start+pageSize, allResults.length);
-    const slice=allResults.slice(start,end);
-    return slice.map(r=>{
-      const k = r.key || (new URL(r.downloadUrl)).searchParams.get('Key') || r.downloadUrl;
-      return {k, url:r.downloadUrl};
-    });
-  }
-  const delay=ms=>new Promise(r=>setTimeout(r,ms));
+  $('clearSel').onclick=()=>{ selected.clear(); updateSelected(); renderPage(); };
 
-  // ---------- Lightbox ----------
-  const lb = $('lightbox'), lbImg = $('lbImg');
-  function openLightbox(absIndex){
-    slideIndex = absIndex;
-    updateLightbox();
-    lb.classList.add('show');
-  }
-  function updateLightbox(){
-    if(slideIndex<0) return;
-    slideIndex = Math.min(Math.max(0, slideIndex), allResults.length-1);
-    lbImg.src = allResults[slideIndex].downloadUrl;
-  }
-  $('lbClose').onclick = ()=> lb.classList.remove('show');
-  $('lbPrev').onclick  = ()=>{ slideIndex--; updateLightbox(); };
-  $('lbNext').onclick  = ()=>{ slideIndex++; updateLightbox(); };
+  // ZIP download
+  $('downloadZip').onclick = async ()=>{
+    const urlsForZip = []; // only selected
+    const start=(page-1)*pageSize, end=Math.min(start+pageSize,allResults.length);
+    allResults.slice(start,end).forEach(r=>{
+      const k = r.key || keyFromUrl(r.downloadUrl);
+      if(selected.has(k)) urlsForZip.push({url:r.downloadUrl, name:safeName(k)});
+    });
+    if(urlsForZip.length===0){ alert('कृपया कुछ फोटो चुनें'); return; }
+
+    hint.textContent='ZIP बन रहा है…';
+    try{
+      const zip=new JSZip();
+      let ok=0, fail=0;
+      for(const it of urlsForZip){
+        try{
+          const resp=await fetch(it.url, {mode:'cors'}); // presigned S3 पर आमतौर पर ठीक
+          const blob=await resp.blob();
+          zip.file(it.name, blob);
+          ok++;
+        }catch(e){ fail++; }
+        await wait(60);
+        hint.textContent=`ZIP प्रगति: ${ok+fail}/${urlsForZip.length}`;
+      }
+      const content=await zip.generateAsync({type:'blob'});
+      saveAs(content, 'photos.zip');
+      hint.textContent = fail? `ZIP पूर्ण (कुछ ${fail} फेल)` : 'ZIP पूर्ण';
+    }catch(e){
+      // Fallback: one-by-one
+      hint.textContent='ZIP नहीं बन पाया; fallback डाउनलोड…';
+      for(const it of urlsForZip){
+        const a=document.createElement('a'); a.href=it.url; a.download=it.name; document.body.appendChild(a); a.click(); a.remove();
+        await wait(150);
+      }
+      hint.textContent='डाउनलोड पूर्ण';
+    }
+  };
+  function safeName(k){ return k.split('/').pop().split('?')[0].replace(/[^\w.\-]+/g,'_'); }
+
+  // Lightbox
+  const lb=$('lightbox'), lbImg=$('lbImg');
+  function openLightbox(absIndex){ slideIndex=absIndex; updateLightbox(); lb.classList.add('show'); }
+  function updateLightbox(){ if(slideIndex<0) return; slideIndex=Math.min(Math.max(0,slideIndex),allResults.length-1); lbImg.src=allResults[slideIndex].downloadUrl; }
+  $('lbClose').onclick=()=> lb.classList.remove('show');
+  $('lbPrev').onclick = ()=>{ slideIndex--; updateLightbox(); };
+  $('lbNext').onclick = ()=>{ slideIndex++; updateLightbox(); };
   window.addEventListener('keydown',e=>{
     if(!lb.classList.contains('show')) return;
     if(e.key==='Escape') $('lbClose').click();
     if(e.key==='ArrowLeft') $('lbPrev').click();
     if(e.key==='ArrowRight') $('lbNext').click();
   });
-
 })();
 </script>
 </body>
