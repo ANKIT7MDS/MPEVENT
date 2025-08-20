@@ -3,66 +3,83 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Selfie Search — Camera Fix</title>
+  <title>Selfie Search — Final</title>
   <style>
     :root{ --line:#e5e7eb; --brand:#5b7cff; --ok:#10b981; --danger:#ef4444; --muted:#6b7280; }
+    *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#fafaff,#eef2ff);color:#0d1220}
-    .wrap{max-width:1050px;margin:0 auto;padding:14px}
+    .wrap{max-width:1100px;margin:0 auto;padding:14px}
     .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 8px rgba(15,23,42,.05);padding:14px}
     .btn{border:none;background:var(--brand);color:#fff;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
     .btn.secondary{background:#1118270d;color:#111827;border:1px solid var(--line)}
     .btn.danger{background:var(--danger)}
     .hidden{display:none!important}
-    .video{width:100%;border-radius:12px;background:#000}
+    /* Camera preview box — change width if you want  */
+    .camWrap{width:360px;max-width:100%}
+    .media{width:100%;border-radius:12px;background:#000;border:1px solid var(--line)}
     input[type="range"]{width:200px}
-    input[type="number"]{padding:10px;border:1px solid var(--line);border-radius:12px}
+    input[type="number"]{padding:10px;border:1px solid var(--line);border-radius:12px;width:90px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-    .thumb{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+    .thumb{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
     .thumb img{display:block;width:100%;height:140px;object-fit:cover}
     .muted{color:var(--muted)}
+    .k{font-weight:700}
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.25);z-index:20}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <h2 style="margin:8px 0 12px">🟦 Selfie Search <small class="muted">— Camera Fix</small></h2>
   <div class="row" style="justify-content:space-between">
-    <div id="apiBadge" class="muted">API: —</div>
-    <button id="adminToggle" class="btn secondary">Admin Panel</button>
+    <h2 style="margin:8px 0 12px">🟦 <span class="k">Selfie Search</span> — Final</h2>
+    <div class="row">
+      <div id="apiBadge" class="muted">API: —</div>
+      <button id="adminToggle" class="btn secondary" style="margin-left:10px">Admin Panel</button>
+    </div>
   </div>
 
-  <div class="row" style="margin-top:12px;align-items:flex-start">
+  <div class="row" style="margin-top:10px;align-items:flex-start">
+    <!-- Left -->
     <section class="card" style="flex:1 1 520px">
       <h3>इनपुट</h3>
-      <div id="cfg" class="hidden">
-        <input id="base" type="hidden" />
+
+      <!-- Hidden config (prefilled) -->
+      <div class="hidden">
+        <input id="base"   type="hidden" />
         <input id="linkId" type="hidden" />
         <input id="folder" type="hidden" />
       </div>
-      <div class="row">
-        <label class="muted">Threshold</label><input id="th" type="range" min="0.2" max="0.9" step="0.01" value="0.45">
-        <label class="muted">Max</label><input id="mx" type="number" min="1" max="100" value="24">
+
+      <div class="row" style="margin-top:6px">
+        <label class="muted">Threshold</label>
+        <input id="th" type="range" min="0.2" max="0.9" step="0.01" value="0.45">
+        <label class="muted">Max</label>
+        <input id="mx" type="number" min="1" max="100" value="24">
       </div>
+
       <div class="row" style="margin-top:10px">
         <input id="file" type="file" accept="image/*">
-        <button id="go" class="btn">सर्च करें</button>
+        <button id="go"  class="btn">सर्च करें</button>
         <button id="clr" class="btn secondary">क्लियर</button>
       </div>
+
       <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+
       <div class="row">
-        <button id="camStart" class="btn secondary">कैमरा ऑन</button>
-        <button id="camCapture" class="btn" style="background:var(--ok)">कैप्चर</button>
-        <button id="camStop" class="btn danger hidden">बंद करें</button>
+        <button id="camStart"   class="btn secondary">कैमरा ऑन</button>
+        <button id="camCapture" class="btn hidden" style="background:var(--ok)">कैप्चर</button>
+        <button id="camStop"    class="btn danger hidden">बंद करें</button>
       </div>
-      <div style="margin-top:10px">
-        <video id="video" class="video hidden" autoplay playsinline muted></video>
-        <canvas id="canvas" class="hidden"></canvas>
-        <img id="preview" class="video hidden" alt="preview"/>
+
+      <div class="camWrap" style="margin-top:10px">
+        <video  id="video"   class="media hidden" autoplay playsinline muted></video>
+        <canvas id="canvas"  class="hidden"></canvas>
+        <img    id="preview" class="media hidden" alt="preview"/>
       </div>
       <div id="camMsg" class="muted" style="margin-top:6px"></div>
     </section>
 
+    <!-- Right -->
     <section class="card" style="flex:1 1 480px">
       <h3>रिज़ल्ट्स</h3>
       <div id="rstat" class="muted">कोई रिज़ल्ट नहीं</div>
@@ -74,17 +91,20 @@
   <section id="admin" class="card hidden" style="margin-top:12px">
     <h3>🔐 Admin Panel</h3>
     <div class="row">
-      <input id="admToken" type="password" placeholder="Admin Token" style="padding:10px;border:1px solid var(--line);border-radius:12px">
-      <input id="expHours" type="number" value="720" style="padding:10px;border:1px solid var(--line);border-radius:12px">
+      <input id="admToken" type="password" placeholder="Admin Token"
+             style="padding:10px;border:1px solid var(--line);border-radius:12px;min-width:260px">
+      <input id="expHours" type="number" value="720"
+             style="padding:10px;border:1px solid var(--line);border-radius:12px">
       <button id="updateLinkBtn" class="btn">Update Link</button>
       <button id="loadFoldersBtn" class="btn secondary">Load Folders</button>
     </div>
-    <div style="margin-top:10px" class="row">
+
+    <div class="row" style="margin-top:10px">
       <input id="multi" type="file" multiple accept="image/*">
       <button id="uploadBtn" class="btn">Upload Selected</button>
       <span id="upStat" class="muted"></span>
     </div>
-    <pre id="log" style="background:#0b1220;color:#cbd5e1;padding:10px;border-radius:10px;max-height:180px;overflow:auto"></pre>
+    <pre id="log" style="background:#0b1220;color:#cbd5e1;padding:10px;border-radius:10px;max-height:200px;overflow:auto"></pre>
   </section>
 </div>
 
@@ -92,145 +112,182 @@
 
 <script>
 (function(){
+  // ===== Prefill (hidden) =====
   const DEFAULTS = {
-    base: 'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search',
+    base:   'https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search/search',
     linkId: '757ffaf5908b',
     folder: 'sudhirji',
     threshold: 0.45,
     max: 24
   };
-  const $ = (id)=>document.getElementById(id);
-  const q = new URLSearchParams(location.search);
-  const base = $('base'), linkId = $('linkId'), folder = $('folder');
-  base.value   = q.get('base') || DEFAULTS.base;
-  linkId.value = q.get('link') || DEFAULTS.linkId;
-  folder.value = q.get('folder') || DEFAULTS.folder;
-  $('th').value = q.get('threshold') || DEFAULTS.threshold;
-  $('mx').value = q.get('max') || DEFAULTS.max;
-  const apiBadge = $('apiBadge'), resultsEl=$('results'), rstat=$('rstat');
+
+  const $=(id)=>document.getElementById(id);
+  const q=new URLSearchParams(location.search);
+  $('base').value   = q.get('base') || DEFAULTS.base;
+  $('linkId').value = q.get('link') || DEFAULTS.linkId;
+  $('folder').value = q.get('folder') || DEFAULTS.folder;
+  $('th').value     = q.get('threshold') || DEFAULTS.threshold;
+  $('mx').value     = q.get('max') || DEFAULTS.max;
+
+  const base=$('base'), linkId=$('linkId'), folder=$('folder');
+  const apiBadge=$('apiBadge'), resultsEl=$('results'), rstat=$('rstat');
   const file=$('file'), go=$('go'), clr=$('clr');
   const camStart=$('camStart'), camCapture=$('camCapture'), camStop=$('camStop');
   const video=$('video'), canvas=$('canvas'), preview=$('preview'), camMsg=$('camMsg');
-  const adminToggle=$('adminToggle'), admin=$('admin'), admToken=$('admToken'), expHours=$('expHours');
+  const admin=$('admin'), adminToggle=$('adminToggle'), admToken=$('admToken'), expHours=$('expHours');
   const updateLinkBtn=$('updateLinkBtn'), loadFoldersBtn=$('loadFoldersBtn'), multi=$('multi'), uploadBtn=$('uploadBtn'), upStat=$('upStat'), log=$('log');
-  const toast = $('toast');
+  const toast=$('toast');
 
-  function showToast(msg){ toast.textContent=msg; toast.classList.remove('hidden'); setTimeout(()=>toast.classList.add('hidden'), 3000); }
-  function logLine(x){ log.textContent += (typeof x==='string'?x:JSON.stringify(x)) + '\n'; log.scrollTop = log.scrollHeight; }
+  const root = ()=> base.value.replace(/\/search$/, '');
+  const toastMsg = (m)=>{ toast.textContent=m; toast.classList.remove('hidden'); setTimeout(()=>toast.classList.add('hidden'),2500); };
+  const logLine  = (x)=>{ log.textContent += (typeof x==='string'?x:JSON.stringify(x)) + '\n'; log.scrollTop = log.scrollHeight; };
 
-  function apiRoot(){ return base.value.replace(/\/search$/,''); }
+  (async function health(){
+    try{ const r=await fetch(root()+'/health'); await r.json(); apiBadge.textContent='API: OK'; }
+    catch{ apiBadge.textContent='API: Error'; }
+  })();
 
-  async function health(){ try{ const r=await fetch(apiRoot()+'/health'); await r.json(); apiBadge.textContent='API: OK'; } catch(e){ apiBadge.textContent='API: Error'; } } health();
-
-  // Camera start with robust fallbacks
+  // ===== Camera =====
   let stream=null, lastDataUrl=null;
-  async function startWithConstraints(cons){
-    const s = await navigator.mediaDevices.getUserMedia(cons);
-    return s;
-  }
-  camStart.onclick = async() => {
+
+  async function startCam(cons){ return await navigator.mediaDevices.getUserMedia(cons); }
+
+  camStart.onclick = async()=>{
     try{
-      camMsg.textContent = '';
+      camMsg.textContent='';
       if(!location.protocol.startsWith('https') && location.hostname!=='localhost'){
-        showToast('Camera needs HTTPS or localhost'); camMsg.textContent='कृपया साइट HTTPS पर खोलें'; return;
+        camMsg.textContent='कृपया साइट HTTPS पर खोलें (या localhost)।';
+        return;
       }
       if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-      // Try front camera first
       let s;
       try{
-        s = await startWithConstraints({video:{facingMode:{ideal:'user'}, width:{ideal:1280}, height:{ideal:720}}, audio:false});
-      }catch(e1){
-        // Fallback to any/environment
-        try{
-          s = await startWithConstraints({video:true, audio:false});
-        }catch(e2){
-          throw e2;
-        }
+        s = await startCam({video:{facingMode:{ideal:'user'}, width:{ideal:640}, height:{ideal:480}}, audio:false});
+      }catch{
+        s = await startCam({video:true, audio:false});
       }
-      stream = s;
-      video.srcObject = stream;
-      await video.play().catch(()=>{});
+      stream=s; video.srcObject=stream; await video.play().catch(()=>{});
       video.classList.remove('hidden');
       camCapture.classList.remove('hidden');
       camStop.classList.remove('hidden');
       camStart.classList.add('hidden');
       preview.classList.add('hidden');
       lastDataUrl=null;
-      showToast('Camera started');
+      toastMsg('Camera started');
     }catch(err){
-      console.error(err);
-      let msg = 'कैमरा चालू नहीं हुआ.';
-      if(err.name==='NotAllowedError'){ msg += ' परमिशन Allow करें (ब्राउज़र सेटिंग्स).'; }
-      else if(err.name==='NotFoundError'){ msg += ' डिवाइस में कैमरा नहीं मिला.'; }
-      else if(err.name==='NotReadableError'){ msg += ' कैमरा किसी और ऐप द्वारा इस्तेमाल में है.'; }
-      else if(err.message) { msg += ' ' + err.message; }
-      camMsg.textContent = msg + ' Safari में Settings > Safari > Camera: Allow करें. WhatsApp/FB इन-ऐप ब्राउज़र से न खोलें.';
-      showToast(msg);
+      let msg='कैमरा चालू नहीं हुआ.';
+      if(err.name==='NotAllowedError') msg+=' परमिशन Allow करें।';
+      else if(err.name==='NotFoundError') msg+=' कैमरा डिवाइस नहीं मिला।';
+      else if(err.name==='NotReadableError') msg+=' कैमरा किसी और ऐप में व्यस्त है।';
+      camMsg.textContent=msg;
+      toastMsg(msg);
     }
   };
-  camCapture.onclick = async()=>{
-    if(!stream){ showToast('पहले कैमरा ऑन करें'); return; }
-    const track = stream.getVideoTracks()[0];
-    const settings = track.getSettings();
-    const w = Math.min(800, settings.width || 640);
-    const h = Math.round(w*(video.videoHeight/video.videoWidth));
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video,0,0,w,h);
+
+  camCapture.onclick = ()=>{
+    if(!stream){ toastMsg('पहले कैमरा ऑन करें'); return; }
+    const w=360, h=Math.round(w*(video.videoHeight/video.videoWidth || 3/4));
+    canvas.width=w; canvas.height=h;
+    const ctx=canvas.getContext('2d'); ctx.drawImage(video,0,0,w,h);
     lastDataUrl = canvas.toDataURL('image/jpeg',0.92);
-    preview.src = lastDataUrl; preview.classList.remove('hidden');
-    showToast('कैप्चर हो गया');
+    preview.src=lastDataUrl; preview.classList.remove('hidden');
   };
+
   camStop.onclick = ()=>{
     if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
     video.classList.add('hidden'); camCapture.classList.add('hidden'); camStop.classList.add('hidden'); camStart.classList.remove('hidden');
   };
 
-  // helpers
+  // ===== File utils =====
   function readFileToDataURL(f){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(f); }); }
   function loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.crossOrigin='anonymous'; i.src=src; }); }
-  async function toJPEG(input, maxSide=1500, q=0.92){ const dataUrl = (typeof input==='string'&&input.startsWith('data:'))?input:await readFileToDataURL(input); const img=await loadImage(dataUrl); const s=Math.min(1,maxSide/Math.max(img.width,img.height)); const w=Math.round(img.width*s), h=Math.round(img.height*s); const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); return c.toDataURL('image/jpeg',q); }
+  async function toJPEG(input,maxSide=1500,q=0.92){
+    const dataUrl=(typeof input==='string'&&input.startsWith('data:'))?input:await readFileToDataURL(input);
+    const img=await loadImage(dataUrl);
+    const s=Math.min(1,maxSide/Math.max(img.width,img.height));
+    const w=Math.round(img.width*s), h=Math.round(img.height*s);
+    const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+    return c.toDataURL('image/jpeg',q);
+  }
 
+  // ===== Search =====
   async function search(){
     try{
       go.disabled=true; rstat.textContent='सर्च हो रहा है…'; resultsEl.innerHTML='';
-      let data = lastDataUrl;
-      if(!data){ const f=file.files[0]; if(!f){ rstat.textContent='कृपया फोटो चुनें या कैमरा से कैप्चर करें'; go.disabled=false; return; } data = await toJPEG(f,1500,0.9); preview.src=data; preview.classList.remove('hidden'); }
-      const payload = { image: data, linkId: linkId.value, threshold:Number($('th').value), max:Number($('mx').value) };
-      const res = await fetch(base.value, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-      const j = await res.json(); if(!res.ok) throw new Error(j.error||res.statusText);
-      rstat.textContent = (j.count||0) + ' results'; render(j.results||[]);
-    }catch(e){ rstat.textContent = 'फेल: '+e.message; }
-    finally{ go.disabled=false; }
+      let data=lastDataUrl;
+      if(!data){
+        const f=file.files[0];
+        if(!f){ rstat.textContent='कृपया फोटो चुनें या कैमरा से कैप्चर करें'; go.disabled=false; return; }
+        data = await toJPEG(f,1500,0.9);
+        preview.src=data; preview.classList.remove('hidden');
+      }
+      const payload={ image:data, linkId:linkId.value, threshold:Number($('th').value), max:Number($('mx').value) };
+      const r=await fetch(base.value,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const j=await r.json(); if(!r.ok) throw new Error(j.error||r.statusText);
+      rstat.textContent=(j.count||0)+' results';
+      render(j.results||[]);
+    }catch(e){
+      rstat.textContent='फेल: '+e.message;
+    }finally{
+      go.disabled=false;
+    }
   }
+
   function render(arr){
     resultsEl.innerHTML=''; if(!arr.length) return;
     arr.forEach((r,i)=>{
-      const cell=document.createElement('div');
+      const wrap=document.createElement('div');
       const th=document.createElement('div'); th.className='thumb';
       const img=document.createElement('img'); img.src=r.downloadUrl; img.alt=r.key||('item-'+(i+1));
       th.appendChild(img);
-      const meta=document.createElement('div'); meta.style.padding='6px'; meta.innerHTML='item-'+(i+1)+'<br><span class="muted">score: '+Number(r.similarity||0).toFixed(3)+'</span>';
-      cell.appendChild(th); cell.appendChild(meta); resultsEl.appendChild(cell);
+      const meta=document.createElement('div'); meta.style.padding='6px';
+      meta.innerHTML='item-'+(i+1)+'<br><span class="muted">score: '+Number(r.similarity||0).toFixed(3)+'</span>';
+      wrap.appendChild(th); wrap.appendChild(meta);
+      resultsEl.appendChild(wrap);
     });
   }
-  go.onclick = search; clr.onclick = ()=>{ file.value=''; lastDataUrl=null; preview.classList.add('hidden'); rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; };
 
-  // Admin toggles
-  adminToggle.onclick = ()=>admin.classList.toggle('hidden');
-  function root(){ return base.value.replace(/\/search$/,''); }
+  go.onclick = search;
+  clr.onclick = ()=>{ file.value=''; lastDataUrl=null; preview.classList.add('hidden'); rstat.textContent='कोई रिज़ल्ट नहीं'; resultsEl.innerHTML=''; };
+
+  // ===== Admin =====
+  adminToggle.onclick = ()=> admin.classList.toggle('hidden');
+  const api = (path, opts={}) => fetch(root()+path, opts);
+
   updateLinkBtn.onclick = async()=>{
-    try{ const body={ linkId: linkId.value, allowedFolders: folder.value.split(',').map(s=>s.trim()).filter(Boolean), expiresInHours: Number(expHours.value) }; const r = await fetch(root()+'/admin/update-link', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')}, body: JSON.stringify(body)}); const j=await r.json(); logLine(j); }catch(e){ logLine(e.message); }
+    try{
+      const body={
+        linkId: linkId.value,
+        allowedFolders: folder.value.split(',').map(s=>s.trim()).filter(Boolean),
+        expiresInHours: Number(expHours.value)
+      };
+      const r=await api('/admin/update-link',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},body:JSON.stringify(body)});
+      logLine(await r.json());
+      toastMsg(r.ok?'Updated':'Error');
+    }catch(e){ logLine(e.message); toastMsg('Error'); }
   };
-  loadFoldersBtn.onclick = async()=>{ try{ const r = await fetch(root()+'/admin/folders', {headers:{Authorization:'Bearer '+(admToken.value||'')}}); logLine(await r.json()); }catch(e){ logLine(e.message);} };
-  let selected=[]; multi.onchange = ()=>{ selected = Array.from(multi.files||[]); upStat.textContent = selected.length+' files selected'; };
+
+  loadFoldersBtn.onclick = async()=>{
+    try{
+      const r=await api('/admin/folders',{headers:{Authorization:'Bearer '+(admToken.value||'')}});
+      logLine(await r.json());
+    }catch(e){ logLine(e.message); }
+  };
+
+  let selected=[];
+  multi.onchange = ()=>{ selected = Array.from(multi.files||[]); upStat.textContent=selected.length+' files selected'; };
   uploadBtn.onclick = async()=>{
     if(!selected.length){ upStat.textContent='No files selected'; return; }
     let ok=0,dup=0,err=0; uploadBtn.disabled=true; upStat.textContent='Uploading…';
     for(const f of selected){
-      try{ const jpeg = await toJPEG(f,2000,0.9); const body={folderId:folder.value, image:jpeg}; const r=await fetch(root()+'/admin/upload',{method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')}, body:JSON.stringify(body)}); const j=await r.json(); if(j.duplicate) dup++; else ok++; logLine({file:f.name, result:j}); }catch(e){ err++; logLine({file:f.name,error:e.message}); }
+      try{
+        const jpeg=await toJPEG(f,2000,0.9);
+        const body={ folderId:folder.value, image:jpeg };
+        const r=await api('/admin/upload',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(admToken.value||'')},body:JSON.stringify(body)});
+        const j=await r.json(); if(j.duplicate) dup++; else ok++; logLine({file:f.name,result:j});
+      }catch(e){ err++; logLine({file:f.name,error:e.message}); }
     }
-    uploadBtn.disabled=false; upStat.textContent = `Done: ${ok} ok, ${dup} duplicate, ${err} error`;
+    uploadBtn.disabled=false; upStat.textContent=`Done: ${ok} ok, ${dup} duplicate, ${err} error`;
   };
 })();
 </script>
